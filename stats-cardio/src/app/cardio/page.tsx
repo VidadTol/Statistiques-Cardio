@@ -7,7 +7,9 @@ import CardioUploader from '@/components/CardioUploader';
 import StatsProgression from '@/components/StatsProgression';
 import PersonalizedAnalysis from '@/components/PersonalizedAnalysis';
 import TrainingRecommendations from '@/components/TrainingRecommendations';
-import HistoryTable from '@/components/HistoryTable'; // Importez le composant du tableau
+import HistoryTable from '@/components/HistoryTable';
+import HeartRateZones from '@/components/HeartRateZones';
+import ProgressionAnalysis from '@/components/ProgressionAnalysis'; // Importez le nouveau composant
 import { Trash2 } from 'lucide-react';
 
 export default function CardioPage() {
@@ -54,14 +56,13 @@ export default function CardioPage() {
     setAnalyses([]);
   };
 
-  // On récupère l'analyse la plus récente pour l'afficher en détail
   const lastAnalyse = analyses.length > 0 ? analyses[analyses.length - 1] : null;
+  const previousAnalyse = analyses.length > 1 ? analyses[analyses.length - 2] : null;
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl text-center font-bold mb-8">Analyse Cardio</h1>
       
-      {/* Affichez toujours le bouton Nouvelle Analyse */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">Dernière Séance Analysée</h2>
         <div className="flex space-x-2">
@@ -83,7 +84,6 @@ export default function CardioPage() {
         </div>
       </div>
       
-      {/* Affichez l'uploader si l'utilisateur l'a activé */}
       {isUploading && (
         <div className="my-8">
           <CardioUploader onAnalyseExtracted={handleNewAnalyse} />
@@ -93,19 +93,31 @@ export default function CardioPage() {
         </div>
       )}
 
-      {/* Affichez la dernière analyse en détail si elle existe */}
       {lastAnalyse ? (
-        <div className="mb-8 p-6 bg-white rounded-lg shadow-lg">
-          <h2 className="text-2xl font-bold mb-4">Séance du {lastAnalyse.date}</h2>
-          <StatsProgression data={lastAnalyse} />
-          <PersonalizedAnalysis data={lastAnalyse} />
-          <TrainingRecommendations data={lastAnalyse} />
-        </div>
+        <>
+          {/* Nouveau composant de progression */}
+          <ProgressionAnalysis 
+            currentData={lastAnalyse} 
+            previousData={previousAnalyse} 
+          />
+          
+          <div className="mb-8 p-6 bg-white rounded-lg shadow-lg">
+            <h2 className="text-2xl font-bold mb-4">Séance du {lastAnalyse.date}</h2>
+            <StatsProgression data={lastAnalyse} />
+            <PersonalizedAnalysis data={lastAnalyse} />
+            <TrainingRecommendations data={lastAnalyse} />
+            {lastAnalyse.heartRateZones && (
+              <HeartRateZones 
+                zones={lastAnalyse.heartRateZones} 
+                totalDurationSeconds={lastAnalyse.dureeExercice * 60} 
+              />
+            )}
+          </div>
+        </>
       ) : (
         <p className="text-center text-gray-500">Aucune analyse enregistrée. Commencez par importer un fichier.</p>
       )}
 
-      {/* Affichez le tableau en dessous, s'il y a des analyses */}
       {analyses.length > 0 && (
         <>
           <h2 className="text-2xl font-bold mt-8 mb-4">Historique complet des séances</h2>
