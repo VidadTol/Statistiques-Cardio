@@ -34,9 +34,9 @@ Suivez ces étapes pour installer et lancer l'application en local :
 Bash
 
   
+git clone https://github.com/VidadTol/Statistiques-Cardio
+cd Statistiques-Cardio
 
-git clone <URL\_DU\_DÉPÔT>
-cd cardio-app
 
 **2\. Installez les dépendances :**
 
