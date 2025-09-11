@@ -56,6 +56,12 @@ export default function CardioPage() {
     setAnalyses([]);
   };
 
+  const handleUpdateAnalyse = (id: string, updatedData: Partial<CardioData>) => {
+    setAnalyses(prev => prev.map(ana => 
+      ana.id === id ? { ...ana, ...updatedData } : ana
+    ));
+  };
+
   const lastAnalyse = analyses.length > 0 ? analyses[analyses.length - 1] : null;
   const previousAnalyse = analyses.length > 1 ? analyses[analyses.length - 2] : null;
 
@@ -121,7 +127,11 @@ export default function CardioPage() {
       {analyses.length > 0 && (
         <>
           <h2 className="text-2xl font-bold mt-8 mb-4">Historique complet des séances</h2>
-          <HistoryTable analyses={analyses} onDelete={handleDeleteAnalyse} />
+          <HistoryTable 
+            analyses={analyses} 
+            onDelete={handleDeleteAnalyse} 
+            onUpdate={handleUpdateAnalyse}
+          />
         </>
       )}
     </div>

@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { FileUp, Loader2, XCircle } from 'lucide-react';
-import { CardioData, HeartRateZone } from '@/types/data';
+import { CardioData, HeartRateZone, HeartRatePoint, IntervalData } from '@/types/data';
 
 interface CardioUploaderProps {
   onAnalyseExtracted: (data: CardioData) => void;
@@ -77,12 +77,108 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
         const totalCalories = laps.reduce((sum, lap) => sum + parseFloat(lap.getElementsByTagName('Calories')[0]?.textContent || '0'), 0);
         const totalDurationSeconds = laps.reduce((sum, lap) => sum + parseFloat(lap.getElementsByTagName('TotalTimeSeconds')[0]?.textContent || '0'), 0);
         
-        const trackpoints = Array.from(xmlDoc.getElementsByTagName('Trackpoint'));
-        const heartRates = trackpoints
-            .map(tp => parseFloat(tp.getElementsByTagName('HeartRateBpm')[0]?.getElementsByTagName('Value')[0]?.textContent || '0'))
-            .filter(hr => hr > 0);
+        // Extraction de la FC Maximum depuis les LAPs
+        const maxHeartRateElement = laps[0]?.getElementsByTagName('MaximumHeartRateBpm')[0]?.getElementsByTagName('Value')[0];
+        const maxHeartRate = maxHeartRateElement ? parseFloat(maxHeartRateElement.textContent || '0') : 0;
         
+        const trackpoints = Array.from(xmlDoc.getElementsByTagName('Trackpoint'));
+        
+        // Extraction de la timeline détaillée FC avec timestamps
+        const heartRateTimeline: HeartRatePoint[] = [];
+        const activityStartTime = trackpoints[0]?.getElementsByTagName('Time')[0]?.textContent;
+        const startTimestamp = activityStartTime ? new Date(activityStartTime).getTime() : Date.now();
+        
+        trackpoints.forEach((tp, index) => {
+          const timeElement = tp.getElementsByTagName('Time')[0];
+          const hrElement = tp.getElementsByTagName('HeartRateBpm')[0]?.getElementsByTagName('Value')[0];
+          
+          if (timeElement && hrElement) {
+            const timestamp = timeElement.textContent || '';
+            const heartRate = parseFloat(hrElement.textContent || '0');
+            const currentTime = new Date(timestamp).getTime();
+            const elapsedSeconds = Math.round((currentTime - startTimestamp) / 1000);
+            
+            if (heartRate > 0) {
+              heartRateTimeline.push({
+                timestamp,
+                heartRate,
+                elapsedSeconds
+              });
+            }
+          }
+        });
+        
+        const heartRates = heartRateTimeline.map(point => point.heartRate);
         const averageHeartRate = heartRates.length > 0 ? heartRates.reduce((sum, hr) => sum + hr, 0) / heartRates.length : 0;
+        
+        // Détection des intervalles de fractionné
+        const detectIntervals = (timeline: HeartRatePoint[]): IntervalData[] => {
+          if (timeline.length < 10) return []; // Pas assez de données
+          
+          const intervals: IntervalData[] = [];
+          const fcMoyenne = averageHeartRate;
+          const seuilEffort = fcMoyenne + 20; // FC > moyenne + 20 bpm = effort
+          const seuilRepos = fcMoyenne - 10;  // FC < moyenne - 10 bpm = repos
+          
+          interface TempInterval {
+            type: 'effort' | 'repos';
+            start: number;
+            heartRates: number[];
+          }
+          
+          let currentInterval: TempInterval | null = null;
+          
+          const finishInterval = (endTime: number) => {
+            if (currentInterval && currentInterval.heartRates.length >= 5) {
+              const duration = endTime - currentInterval.start;
+              if (duration >= 30) {
+                const avgHR = currentInterval.heartRates.reduce((sum: number, hr: number) => sum + hr, 0) / currentInterval.heartRates.length;
+                intervals.push({
+                  type: currentInterval.type,
+                  startTime: currentInterval.start,
+                  endTime: endTime,
+                  duration,
+                  avgHeartRate: Math.round(avgHR),
+                  maxHeartRate: Math.max(...currentInterval.heartRates)
+                });
+              }
+            }
+          };
+          
+          timeline.forEach((point, index) => {
+            const isEffort = point.heartRate > seuilEffort;
+            const isRepos = point.heartRate < seuilRepos;
+            const currentType = isEffort ? 'effort' : isRepos ? 'repos' : null;
+            
+            if (currentType && (!currentInterval || currentInterval.type !== currentType)) {
+              // Finir l'intervalle précédent
+              finishInterval(point.elapsedSeconds);
+              
+              // Commencer un nouvel intervalle
+              currentInterval = {
+                type: currentType,
+                start: point.elapsedSeconds,
+                heartRates: [point.heartRate]
+              };
+            } else if (currentInterval && currentType === currentInterval.type) {
+              // Continuer l'intervalle actuel
+              currentInterval.heartRates.push(point.heartRate);
+            }
+          });
+          
+          // Finir le dernier intervalle
+          if (timeline.length > 0) {
+            finishInterval(timeline[timeline.length - 1].elapsedSeconds);
+          }
+          
+          return intervals;
+        };
+        
+        const detectedIntervals = detectIntervals(heartRateTimeline);
+        const fractionsCount = Math.floor(detectedIntervals.filter(interval => interval.type === 'effort').length);
+        
+        // Calculer le temps total depuis la timeline
+        const totalTimeSeconds = heartRateTimeline.length > 0 ? heartRateTimeline[heartRateTimeline.length - 1].elapsedSeconds : 0;
 
         const fileName = fileToProcess.name;
         const dateMatch = fileName.match(/(\d{4})(\d{2})(\d{2})/);
@@ -142,22 +238,26 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
           }
         }
 
-        const newAnalyse: CardioData = {
-          id: `TCX-${Date.now()}`,
-          date: activityDate,
-          dureeExercice: Math.round(dureeMinutes),
-          distance: parseFloat(distanceKm.toFixed(2)),
-          vitesseMoyenne: parseFloat((distanceKm / dureeHeures).toFixed(2)), 
+        const newAnalysis: CardioData = {
+          id: Math.random().toString(36).substring(7),
+          date: new Date().toLocaleDateString(),
+          dureeExercice: totalTimeSeconds / 60, // convertir en minutes
+          distance: distanceKm,
+          fcMax: maxHeartRate || 0,
           frequenceCardio: Math.round(averageHeartRate),
-          calories: Math.round(totalCalories),
-          vo2Max: parseFloat(vo2MaxEstimate.toFixed(1)),
-          notes: 'Analyse depuis un fichier TCX',
-          heartRateZones: calculatedHeartRateZones,
-          age: parseInt(age),
-          sexe: finalSexe,
+          calories: totalCalories || 0, // Utiliser les calories du TCX
+          vitesseMoyenne: distanceKm > 0 && totalTimeSeconds > 0 ? (distanceKm / (totalTimeSeconds / 3600)) : 0,
+          vo2Max: Math.round(vo2MaxEstimate), // Utiliser le calcul existant
+          notes: '',
+          type: 'Course',
+          terrain: 'Route',
+          intensite: 3,
+          heartRateTimeline: heartRateTimeline,
+          intervals: detectedIntervals,
+          fractionsCount: fractionsCount
         };
 
-        onAnalyseExtracted(newAnalyse);
+        onAnalyseExtracted(newAnalysis);
       } catch (err) {
         setError("Une erreur est survenue lors de l'analyse du fichier. Le fichier peut être corrompu.");
         console.error("Erreur de parsing TCX:", err);
