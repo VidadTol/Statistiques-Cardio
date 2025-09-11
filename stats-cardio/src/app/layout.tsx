@@ -3,6 +3,29 @@ import "./globals.css";
 import Link from "next/link";
 import { Activity, Heart } from 'lucide-react'; 
 
+export const metadata = {
+  title: "Suivi Cardio & Sommeil - Analyse de vos performances sportives",
+  description: "Application de suivi et d'analyse de vos données cardio et sommeil. Importez vos fichiers TCX, visualisez vos statistiques et obtenez des recommandations personnalisées.",
+  keywords: "cardio, sommeil, analyse, TCX, sport, fitness, santé, suivi",
+  authors: [{ name: "VidadTol" }],
+  openGraph: {
+    title: "Suivi Cardio & Sommeil",
+    description: "Analysez vos performances cardio et votre qualité de sommeil",
+    type: "website",
+    locale: "fr_FR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Suivi Cardio & Sommeil",
+    description: "Analysez vos performances cardio et votre qualité de sommeil",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  viewport: "width=device-width, initial-scale=1",
+}
+
 export default function RootLayout({
   children,
 }: {
