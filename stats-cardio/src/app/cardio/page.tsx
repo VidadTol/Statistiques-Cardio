@@ -1,139 +1,159 @@
-// src/app/cardio/page.tsx
-"use client";
+// src/app/cardio/page.tsx - Version ultra-moderne
+'use client';
 
 import { useState, useEffect } from 'react';
+import UltraDashboard from './components/UltraDashboard';
+import { mockSessionData } from './data/mockData';
+import CardioUploader from './components/CardioUploader';
 import { CardioData } from '@/types/data';
-import CardioUploader from '@/components/CardioUploader';
-import StatsProgression from '@/components/StatsProgression';
-import PersonalizedAnalysis from '@/components/PersonalizedAnalysis';
-import TrainingRecommendations from '@/components/TrainingRecommendations';
-import HistoryTable from '@/components/HistoryTable';
-import HeartRateZones from '@/components/HeartRateZones';
-import ProgressionAnalysis from '@/components/ProgressionAnalysis'; // Importez le nouveau composant
-import { Trash2 } from 'lucide-react';
 
 export default function CardioPage() {
   const [analyses, setAnalyses] = useState<CardioData[]>([]);
+  const [selectedSessionIndex, setSelectedSessionIndex] = useState<number>(-1); // -1 = mock data
   const [isUploading, setIsUploading] = useState(false);
 
+  // Synchronisation avec le localStorage
   useEffect(() => {
     try {
       const savedAnalyses = localStorage.getItem('cardioAnalyses');
       if (savedAnalyses) {
-        setAnalyses(JSON.parse(savedAnalyses));
+        const parsedAnalyses = JSON.parse(savedAnalyses);
+        setAnalyses(parsedAnalyses);
+        // Auto-sélectionner la dernière session si elle existe
+        if (parsedAnalyses.length > 0) {
+          setSelectedSessionIndex(parsedAnalyses.length - 1);
+        }
       }
     } catch (error) {
       console.error("Erreur lors du chargement des données depuis localStorage", error);
     }
   }, []);
 
+  // Sauvegarder automatiquement les changements
   useEffect(() => {
-    try {
-      localStorage.setItem('cardioAnalyses', JSON.stringify(analyses));
-    } catch (error) {
-      console.error("Erreur lors de la sauvegarde des données dans localStorage", error);
+    if (analyses.length > 0) {
+      try {
+        localStorage.setItem('cardioAnalyses', JSON.stringify(analyses));
+      } catch (error) {
+        console.error("Erreur lors de la sauvegarde des données dans localStorage", error);
+      }
     }
   }, [analyses]);
 
   const handleNewAnalyse = (newAnalyse: CardioData) => {
-    setAnalyses((prev) => [...prev, newAnalyse]);
+    setAnalyses(prev => {
+      const updated = [...prev, newAnalyse];
+      setSelectedSessionIndex(updated.length - 1); // Sélectionner la nouvelle session
+      return updated;
+    });
     setIsUploading(false);
   };
 
   const handleStartUpload = () => {
     setIsUploading(true);
   };
-  
+
   const handleCancelUpload = () => {
     setIsUploading(false);
   };
 
-  const handleDeleteAnalyse = (idToDelete: string) => {
-    setAnalyses(analyses.filter(ana => ana.id !== idToDelete));
-  };
-  
   const handleClearAllAnalyses = () => {
     setAnalyses([]);
+    setSelectedSessionIndex(-1); // Retour aux données de démo
   };
 
-  const handleUpdateAnalyse = (id: string, updatedData: Partial<CardioData>) => {
-    setAnalyses(prev => prev.map(ana => 
-      ana.id === id ? { ...ana, ...updatedData } : ana
-    ));
-  };
-
-  const lastAnalyse = analyses.length > 0 ? analyses[analyses.length - 1] : null;
-  const previousAnalyse = analyses.length > 1 ? analyses[analyses.length - 2] : null;
+  const currentData = selectedSessionIndex >= 0 && analyses[selectedSessionIndex] 
+    ? analyses[selectedSessionIndex] 
+    : mockSessionData;
+  
+  const previousData = selectedSessionIndex > 0 && analyses[selectedSessionIndex - 1]
+    ? analyses[selectedSessionIndex - 1]
+    : null;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl text-center font-bold mb-8">Analyse Cardio</h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">Dernière Séance Analysée</h2>
-        <div className="flex space-x-2">
-          {!isUploading && (
-            <button
-              onClick={handleStartUpload}
-              className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors"
-            >
-              Nouvelle Analyse
-            </button>
-          )}
-          <button
-            onClick={handleClearAllAnalyses}
-            className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition-colors flex items-center"
-          >
-            <Trash2 size={20} className="mr-1" />
-            Tout supprimer
-          </button>
+      {/* Navigation Header */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">
+                ⚡ Statistiques Cardio
+              </h1>
+              <p className="text-sm text-gray-600">
+                Analyse avancée de vos performances sportives
+              </p>
+            </div>
+            
+            <div className="flex space-x-3">
+              {analyses.length > 0 && (
+                <select
+                  value={selectedSessionIndex}
+                  onChange={(e) => setSelectedSessionIndex(parseInt(e.target.value))}
+                  className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value={-1}>🎭 Données de démo</option>
+                  {analyses.map((analysis, index) => (
+                    <option key={analysis.id} value={index}>
+                      📊 {analysis.date} - {analysis.distance.toFixed(1)}km
+                    </option>
+                  ))}
+                </select>
+              )}
+              
+              {!isUploading && (
+                <button 
+                  onClick={handleStartUpload}
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 flex items-center gap-2"
+                >
+                  📁 Importer TCX
+                </button>
+              )}
+
+              {analyses.length > 0 && (
+                <button 
+                  onClick={handleClearAllAnalyses}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 flex items-center gap-2"
+                >
+                  🗑️ Tout supprimer
+                </button>
+              )}
+              
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 flex items-center gap-2"
+              >
+                🔄 Recharger
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-      
+
+      {/* Upload Section */}
       {isUploading && (
-        <div className="my-8">
-          <CardioUploader onAnalyseExtracted={handleNewAnalyse} />
-          <button onClick={handleCancelUpload} className="mt-4 text-sm text-red-500 hover:underline">
-            Annuler
-          </button>
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="bg-white rounded-xl p-6 shadow-lg border">
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">
+              📁 Importer votre fichier TCX
+            </h3>
+            <CardioUploader onAnalyseExtracted={handleNewAnalyse} />
+            <button 
+              onClick={handleCancelUpload} 
+              className="mt-4 text-sm text-red-500 hover:underline"
+            >
+              Annuler l'import
+            </button>
+          </div>
         </div>
       )}
 
-      {lastAnalyse ? (
-        <>
-          {/* Nouveau composant de progression */}
-          <ProgressionAnalysis 
-            currentData={lastAnalyse} 
-            previousData={previousAnalyse} 
-          />
-          
-          <div className="mb-8 p-6 bg-white rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold mb-4">Séance du {lastAnalyse.date}</h2>
-            <StatsProgression data={lastAnalyse} />
-            <PersonalizedAnalysis data={lastAnalyse} />
-            <TrainingRecommendations data={lastAnalyse} />
-            {lastAnalyse.heartRateZones && (
-              <HeartRateZones 
-                zones={lastAnalyse.heartRateZones} 
-                totalDurationSeconds={lastAnalyse.dureeExercice * 60} 
-              />
-            )}
-          </div>
-        </>
-      ) : (
-        <p className="text-center text-gray-500">Aucune analyse enregistrée. Commencez par importer un fichier.</p>
-      )}
-
-      {analyses.length > 0 && (
-        <>
-          <h2 className="text-2xl font-bold mt-8 mb-4">Historique complet des séances</h2>
-          <HistoryTable 
-            analyses={analyses} 
-            onDelete={handleDeleteAnalyse} 
-            onUpdate={handleUpdateAnalyse}
-          />
-        </>
-      )}
+      {/* Le Dashboard Ultra-Moderne */}
+      <UltraDashboard 
+        data={currentData}
+      />
+      
     </div>
   );
 }

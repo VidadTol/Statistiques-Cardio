@@ -180,14 +180,48 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
         // Calculer le temps total depuis la timeline
         const totalTimeSeconds = heartRateTimeline.length > 0 ? heartRateTimeline[heartRateTimeline.length - 1].elapsedSeconds : 0;
 
+        // Extraction de la date depuis le nom du fichier (formats supportés)
         const fileName = fileToProcess.name;
-        const dateMatch = fileName.match(/(\d{4})(\d{2})(\d{2})/);
-        let activityDate = 'Date inconnue';
-        if (dateMatch) {
-          const year = dateMatch[1];
-          const month = dateMatch[2];
-          const day = dateMatch[3];
-          activityDate = `${day}/${month}/${year}`;
+        let activityDate = new Date().toLocaleDateString(); // fallback sur aujourd'hui
+        
+        // Essayer différents formats de date dans le nom de fichier
+        const datePatterns = [
+          /[A-Za-z]*(\d{4})(\d{2})(\d{2})\d*/, // Zepp20250722104005 (avec préfixe et suffixe)
+          /(\d{4})-(\d{2})-(\d{2})/,           // YYYY-MM-DD
+          /(\d{4})(\d{2})(\d{2})/,             // YYYYMMDD simple
+          /(\d{2})-(\d{2})-(\d{4})/,           // DD-MM-YYYY
+          /(\d{2})(\d{2})(\d{4})/,             // DDMMYYYY
+          /(\d{4})_(\d{2})_(\d{2})/,           // YYYY_MM_DD
+          /(\d{2})_(\d{2})_(\d{4})/            // DD_MM_YYYY
+        ];
+        
+        for (const pattern of datePatterns) {
+          const dateMatch = fileName.match(pattern);
+          if (dateMatch) {
+            let year, month, day;
+            
+            // Déterminer l'ordre selon la longueur du premier groupe
+            if (dateMatch[1].length === 4) {
+              // Format YYYY-MM-DD ou YYYY_MM_DD
+              year = dateMatch[1];
+              month = dateMatch[2];
+              day = dateMatch[3];
+            } else {
+              // Format DD-MM-YYYY ou DD_MM_YYYY
+              day = dateMatch[1];
+              month = dateMatch[2];
+              year = dateMatch[3];
+            }
+            
+            // Validation de la date
+            const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            if (dateObj.getFullYear() == parseInt(year) && 
+                dateObj.getMonth() == parseInt(month) - 1 && 
+                dateObj.getDate() == parseInt(day)) {
+              activityDate = `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+              break;
+            }
+          }
         }
         
         const zoneDurations: { [key: string]: number } = {};
@@ -240,7 +274,7 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
 
         const newAnalysis: CardioData = {
           id: Math.random().toString(36).substring(7),
-          date: new Date().toLocaleDateString(),
+          date: activityDate, // Utiliser la date extraite du nom de fichier
           dureeExercice: totalTimeSeconds / 60, // convertir en minutes
           distance: distanceKm,
           fcMax: maxHeartRate || 0,
