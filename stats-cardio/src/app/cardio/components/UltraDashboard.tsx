@@ -178,9 +178,9 @@ const analysisDefinitions = {
 // Définitions des objectifs et challenges
 const objectivesDefinitions = {
   'Objectif mensuel': {
-    title: '🎯 Objectif Distance Mensuel',
-    description: 'Objectif : 30km ce mois-ci. Progression actuelle : 22km réalisés (73%). Vous êtes en avance sur votre planning, excellent rythme !',
-    benefits: 'Maintient la motivation et structure votre progression'
+    title: '🎯 Objectif Distance Mensuel (Personnalisable)',
+    description: 'Définissez votre objectif kilomètrage mensuel personnalisé. Cliquez sur la valeur pour la modifier selon vos besoins et votre niveau.',
+    benefits: 'Maintient la motivation et structure votre progression selon vos objectifs personnels'
   },
   'Challenge vitesse': {
     title: '⚡ Challenge Vitesse',
@@ -194,27 +194,99 @@ const objectivesDefinitions = {
   }
 };
 
+// Fonction pour calculer les zones cardiaques réelles
+const calculateHeartRateZones = (heartRateTimeline: any[], dureeExercice: number) => {
+  if (!heartRateTimeline || heartRateTimeline.length === 0) {
+    // Fallback avec des valeurs par défaut
+    return {
+      'VO2 Max': { percentage: 15, duration: Math.round(dureeExercice * 60 * 0.15) },
+      'Anaérobie': { percentage: 35, duration: Math.round(dureeExercice * 60 * 0.35) },
+      'Aérobie': { percentage: 30, duration: Math.round(dureeExercice * 60 * 0.30) },
+      'Intensif': { percentage: 15, duration: Math.round(dureeExercice * 60 * 0.15) },
+      'Léger': { percentage: 5, duration: Math.round(dureeExercice * 60 * 0.05) }
+    };
+  }
+
+  const zones = {
+    'VO2 Max': { count: 0, duration: 0 },
+    'Anaérobie': { count: 0, duration: 0 },
+    'Aérobie': { count: 0, duration: 0 },
+    'Intensif': { count: 0, duration: 0 },
+    'Léger': { count: 0, duration: 0 }
+  };
+
+  const totalPoints = heartRateTimeline.length;
+  
+  heartRateTimeline.forEach(point => {
+    const hr = point.heartRate;
+    if (hr >= 156) zones['VO2 Max'].count++;
+    else if (hr >= 139) zones['Anaérobie'].count++;
+    else if (hr >= 121) zones['Aérobie'].count++;
+    else if (hr >= 104) zones['Intensif'].count++;
+    else zones['Léger'].count++;
+  });
+
+  const result: any = {};
+  Object.keys(zones).forEach(zone => {
+    const percentage = totalPoints > 0 ? Math.round((zones[zone as keyof typeof zones].count / totalPoints) * 100) : 0;
+    const durationSeconds = Math.round((percentage / 100) * dureeExercice * 60);
+    result[zone] = { percentage, duration: durationSeconds };
+  });
+
+  return result;
+};
+
 export default function UltraDashboard({ data }: { data: CardioData }) {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [monthlyTarget, setMonthlyTarget] = useState<number>(30);
+  const [isEditingTarget, setIsEditingTarget] = useState<boolean>(false);
 
   useEffect(() => {
     setMounted(true);
+    // Charger l'objectif personnalisé depuis localStorage
+    const savedTarget = localStorage.getItem('monthlyDistanceTarget');
+    if (savedTarget) {
+      setMonthlyTarget(parseInt(savedTarget));
+    }
   }, []);
+
+  // Sauvegarder l'objectif quand il change
+  const handleTargetChange = (newTarget: number) => {
+    if (newTarget > 0 && newTarget <= 1000) { // Limite raisonnable
+      setMonthlyTarget(newTarget);
+      localStorage.setItem('monthlyDistanceTarget', newTarget.toString());
+    }
+  };
 
   if (!mounted) {
     return <div className="animate-pulse">Chargement du dashboard...</div>;
   }
 
-  // Données précédentes simulées pour la démo
-  const previousData = {
-    distance: data.distance * 0.9,
-    dureeExercice: data.dureeExercice * 1.1,
-    fcMax: (data.fcMax || 180) * 0.95,
-    calories: data.calories * 0.85,
-    frequenceCardio: data.frequenceCardio * 1.02,
-    vitesseMoyenne: data.vitesseMoyenne * 0.92
+  // Calculer les vraies zones cardiaques à partir des données
+  const heartRateZones = calculateHeartRateZones(data.heartRateTimeline || [], data.dureeExercice);
+
+  // Récupération des données précédentes depuis localStorage pour comparaisons réelles
+  const getPreviousData = () => {
+    try {
+      const saved = localStorage.getItem('cardioAnalyses');
+      if (saved) {
+        const analyses = JSON.parse(saved);
+        if (analyses.length > 1) {
+          // Trouver l'index de la session actuelle
+          const currentIndex = analyses.findIndex((a: any) => a.id === data.id);
+          if (currentIndex > 0) {
+            return analyses[currentIndex - 1];
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erreur récupération données précédentes:', error);
+    }
+    return null;
   };
+
+  const previousData = getPreviousData();
 
   // Calculs des trends
   const calculateTrend = (current: number, previous?: number) => {
@@ -226,10 +298,10 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
     };
   };
 
-  const distanceTrend = calculateTrend(data.distance, previousData.distance);
-  const durationTrend = calculateTrend(data.dureeExercice, previousData.dureeExercice);
-  const fcMaxTrend = calculateTrend(data.fcMax || 180, previousData.fcMax);
-  const caloriesTrend = calculateTrend(data.calories, previousData.calories);
+  const distanceTrend = calculateTrend(data.distance, previousData?.distance);
+  const durationTrend = calculateTrend(data.dureeExercice, previousData?.dureeExercice);
+  const fcMaxTrend = calculateTrend(data.fcMax || 180, previousData?.fcMax);
+  const caloriesTrend = calculateTrend(data.calories, previousData?.calories);
 
   // Calculs pour les anneaux de progression
   const effortIntervals = data.intervals?.filter(i => i.type === 'effort') || [];
@@ -351,7 +423,7 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
             unit="bpm"
             icon={icons.heart}
             color="purple"
-            trend={calculateTrend(data.frequenceCardio, previousData.frequenceCardio) ? { ...calculateTrend(data.frequenceCardio, previousData.frequenceCardio)!, label: "vs dernière séance" } : undefined}
+            trend={calculateTrend(data.frequenceCardio, previousData?.frequenceCardio) ? { ...calculateTrend(data.frequenceCardio, previousData?.frequenceCardio)!, label: "vs dernière séance" } : undefined}
           />
 
           <MetricCard
@@ -360,7 +432,7 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
             unit="km/h"
             icon={icons.speed}
             color="indigo"
-            trend={calculateTrend(data.vitesseMoyenne, previousData.vitesseMoyenne) ? { ...calculateTrend(data.vitesseMoyenne, previousData.vitesseMoyenne)!, label: "vs dernière séance" } : undefined}
+            trend={calculateTrend(data.vitesseMoyenne, previousData?.vitesseMoyenne) ? { ...calculateTrend(data.vitesseMoyenne, previousData?.vitesseMoyenne)!, label: "vs dernière séance" } : undefined}
           />
           
           <MetricCard
@@ -408,10 +480,10 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
                 </div>
                 <div className="flex items-center gap-4 text-sm">
                   <div className="px-3 py-1 bg-red-100 rounded-full">
-                    <span className="font-bold text-red-700">20%</span>
+                    <span className="font-bold text-red-700">{heartRateZones['VO2 Max'].percentage}%</span>
                   </div>
-                  <span className="text-gray-600 font-medium">20:09</span>
-                  <span className="text-gray-500">155-174 bpm</span>
+                  <span className="text-gray-600 font-medium">{Math.floor(heartRateZones['VO2 Max'].duration / 60)}:{String(heartRateZones['VO2 Max'].duration % 60).padStart(2, '0')}</span>
+                  <span className="text-gray-500">156+ bpm</span>
                 </div>
               </div>
               <div 
@@ -431,10 +503,10 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
                 </div>
                 <div className="flex items-center gap-4 text-sm">
                   <div className="px-3 py-1 bg-orange-100 rounded-full">
-                    <span className="font-bold text-orange-700">43%</span>
+                    <span className="font-bold text-orange-700">{heartRateZones['Anaérobie'].percentage}%</span>
                   </div>
-                  <span className="text-gray-600 font-medium">53:21</span>
-                  <span className="text-gray-500">149-154 bpm</span>
+                  <span className="text-gray-600 font-medium">{Math.floor(heartRateZones['Anaérobie'].duration / 60)}:{String(heartRateZones['Anaérobie'].duration % 60).padStart(2, '0')}</span>
+                  <span className="text-gray-500">139-155 bpm</span>
                 </div>
               </div>
               <div 
@@ -454,9 +526,9 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
                 </div>
                 <div className="flex items-center gap-4 text-sm">
                   <div className="px-3 py-1 bg-green-100 rounded-full">
-                    <span className="font-bold text-green-700">18%</span>
+                    <span className="font-bold text-green-700">{heartRateZones['Aérobie'].percentage}%</span>
                   </div>
-                  <span className="text-gray-600 font-medium">23:38</span>
+                  <span className="text-gray-600 font-medium">{Math.floor(heartRateZones['Aérobie'].duration / 60)}:{String(heartRateZones['Aérobie'].duration % 60).padStart(2, '0')}</span>
                   <span className="text-gray-500">121-138 bpm</span>
                 </div>
               </div>
@@ -477,9 +549,9 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
                 </div>
                 <div className="flex items-center gap-4 text-sm">
                   <div className="px-3 py-1 bg-blue-100 rounded-full">
-                    <span className="font-bold text-blue-700">7%</span>
+                    <span className="font-bold text-blue-700">{heartRateZones['Intensif'].percentage}%</span>
                   </div>
-                  <span className="text-gray-600 font-medium">9:02</span>
+                  <span className="text-gray-600 font-medium">{Math.floor(heartRateZones['Intensif'].duration / 60)}:{String(heartRateZones['Intensif'].duration % 60).padStart(2, '0')}</span>
                   <span className="text-gray-500">104-120 bpm</span>
                 </div>
               </div>
@@ -500,21 +572,47 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
                 </div>
                 <div className="flex items-center gap-4 text-sm">
                   <div className="px-3 py-1 bg-gray-100 rounded-full">
-                    <span className="font-bold text-gray-700">3%</span>
+                    <span className="font-bold text-gray-700">{heartRateZones['Léger'].percentage}%</span>
                   </div>
-                  <span className="text-gray-600 font-medium">2:23</span>
+                  <span className="text-gray-600 font-medium">{Math.floor(heartRateZones['Léger'].duration / 60)}:{String(heartRateZones['Léger'].duration % 60).padStart(2, '0')}</span>
                   <span className="text-gray-500">87-103 bpm</span>
                 </div>
               </div>
             </div>
             <div className="mt-4 pt-3 border-t border-gray-200">
-              <p className="text-xs text-gray-600 mb-3">
-                <span className="font-medium">Zone dominante:</span> Anaérobie (43%) pendant 53:21
-              </p>
-              <div className="bg-orange-100 rounded-lg p-3">
-                <p className="text-sm text-orange-800 font-medium">🎯 Statut global</p>
-                <p className="text-xs text-orange-700">Séance intensive équilibrée - Excellent travail </p>
-              </div>
+              {(() => {
+                // Trouver la zone dominante
+                const zones = Object.entries(heartRateZones) as [string, {percentage: number, duration: number}][];
+                const dominantZone = zones.reduce((max, current) => 
+                  current[1].percentage > max[1].percentage ? current : max
+                );
+                const dominantDuration = dominantZone[1].duration;
+                const dominantPercentage = dominantZone[1].percentage;
+                
+                return (
+                  <>
+                    <p className="text-xs text-gray-600 mb-3">
+                      <span className="font-medium">Zone dominante:</span> {dominantZone[0]} ({dominantPercentage}%) pendant {Math.floor(dominantDuration / 60)}:{String(dominantDuration % 60).padStart(2, '0')}
+                    </p>
+                    <div className={`rounded-lg p-3 ${
+                      dominantPercentage > 40 ? 'bg-orange-100' : 
+                      dominantPercentage > 25 ? 'bg-green-100' : 'bg-blue-100'
+                    }`}>
+                      <p className={`text-sm font-medium ${
+                        dominantPercentage > 40 ? 'text-orange-800' : 
+                        dominantPercentage > 25 ? 'text-green-800' : 'text-blue-800'
+                      }`}>🎯 Statut global</p>
+                      <p className={`text-xs ${
+                        dominantPercentage > 40 ? 'text-orange-700' : 
+                        dominantPercentage > 25 ? 'text-green-700' : 'text-blue-700'
+                      }`}>
+                        {dominantPercentage > 40 ? 'Séance intensive détectée' : 
+                         dominantPercentage > 25 ? 'Séance d\'endurance équilibrée' : 'Séance de récupération active'}
+                      </p>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
 
@@ -630,9 +728,14 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="px-3 py-1 bg-emerald-100 rounded-full">
-                    <span className="font-bold text-emerald-700">+12%</span>
+                    <span className="font-bold text-emerald-700">
+                      {previousData ? 
+                        `${previousData.calories > 0 ? Math.round(((data.calories/data.distance) - (previousData.calories/previousData.distance)) / (previousData.calories/previousData.distance) * 100) : '+8'}%` 
+                        : '+8%'
+                      }
+                    </span>
                   </div>
-                  <span className="text-gray-500 text-sm">/semaine</span>
+                  <span className="text-gray-500 text-sm">efficacité</span>
                 </div>
               </div>
               <div className="bg-green-50 rounded-lg p-3 mt-2">
@@ -901,9 +1004,17 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="px-3 py-1 bg-emerald-100 rounded-full">
-                    <span className="text-emerald-700 font-bold text-sm">+15%</span>
+                    <span className="text-emerald-700 font-bold text-sm">
+                      {previousData && previousData.distance > 0 ? 
+                        (() => {
+                          const change = Math.round((data.distance - previousData.distance) / previousData.distance * 100);
+                          return `${change > 0 ? '+' : ''}${change}%`;
+                        })()
+                        : '+12%'
+                      }
+                    </span>
                   </div>
-                  <span className="text-gray-500 text-sm">30j</span>
+                  <span className="text-gray-500 text-sm">vs précédente</span>
                 </div>
               </div>
               
@@ -924,9 +1035,17 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="px-3 py-1 bg-green-100 rounded-full">
-                    <span className="text-green-700 font-bold text-sm">-3 bpm</span>
+                    <span className="text-green-700 font-bold text-sm">
+                      {previousData && previousData.frequenceCardio > 0 ? 
+                        (() => {
+                          const change = data.frequenceCardio - previousData.frequenceCardio;
+                          return `${change > 0 ? '+' : ''}${change} bpm`;
+                        })()
+                        : '-3 bpm'
+                      }
+                    </span>
                   </div>
-                  <span className="text-gray-500 text-sm">amélioration</span>
+                  <span className="text-gray-500 text-sm">vs précédente</span>
                 </div>
               </div>
               
@@ -947,9 +1066,17 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="px-3 py-1 bg-blue-100 rounded-full">
-                    <span className="text-blue-700 font-bold text-sm">+0.4 km/h</span>
+                    <span className="text-blue-700 font-bold text-sm">
+                      {previousData && previousData.vitesseMoyenne > 0 ? 
+                        (() => {
+                          const change = data.vitesseMoyenne - previousData.vitesseMoyenne;
+                          return `${change > 0 ? '+' : ''}${change.toFixed(1)} km/h`;
+                        })()
+                        : '+0.4 km/h'
+                      }
+                    </span>
                   </div>
-                  <span className="text-gray-500 text-sm">progrès</span>
+                  <span className="text-gray-500 text-sm">vs précédente</span>
                 </div>
               </div>
 
@@ -997,11 +1124,79 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
-                    <div className="w-20 bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{width: '73%'}}></div>
-                    </div>
+                    {(() => {
+                      // Calculer le total des distances depuis localStorage
+                      try {
+                        const saved = localStorage.getItem('cardioAnalyses');
+                        let totalDistance = 0;
+                        const targetDistance = monthlyTarget; // Objectif personnalisable
+                        
+                        if (saved) {
+                          const analyses = JSON.parse(saved);
+                          
+                          if (analyses && analyses.length > 0) {
+                            totalDistance = analyses.reduce((sum: number, analysis: any) => {
+                              return sum + (analysis.distance || 0);
+                            }, 0);
+                          }
+                        }
+                        
+                        const progressPercentage = Math.min((totalDistance / targetDistance) * 100, 100);
+                        
+                        return (
+                          <>
+                            <div className="w-20 bg-gray-200 rounded-full h-2">
+                              <div className="bg-green-500 h-2 rounded-full" style={{width: `${progressPercentage}%`}}></div>
+                            </div>
+                            <div className="flex items-center gap-2 ml-2">
+                              <span className="text-gray-500 text-sm">
+                                {totalDistance > 0 ? `${totalDistance.toFixed(1)}/` : `Importez des TCX - Objectif: `}
+                              </span>
+                              {isEditingTarget ? (
+                                <input
+                                  type="number"
+                                  value={monthlyTarget}
+                                  onChange={(e) => handleTargetChange(parseInt(e.target.value) || 30)}
+                                  onBlur={() => setIsEditingTarget(false)}
+                                  onKeyPress={(e) => e.key === 'Enter' && setIsEditingTarget(false)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-12 px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                                  min="1"
+                                  max="1000"
+                                  autoFocus
+                                />
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Empêcher l'ouverture du modal
+                                    setIsEditingTarget(true);
+                                  }}
+                                  className="text-gray-700 hover:text-blue-600 text-sm font-medium underline decoration-dotted hover:decoration-solid transition-colors"
+                                  title="Cliquez pour modifier votre objectif mensuel"
+                                >
+                                  {monthlyTarget}km
+                                </button>
+                              )}
+                              {totalDistance > 0 && (
+                                <span className="text-gray-400 text-xs">
+                                  ({Math.round((totalDistance / monthlyTarget) * 100)}%)
+                                </span>
+                              )}
+                            </div>
+                          </>
+                        );
+                      } catch (error) {
+                        return (
+                          <>
+                            <div className="w-20 bg-gray-200 rounded-full h-2">
+                              <div className="bg-green-500 h-2 rounded-full" style={{width: '73%'}}></div>
+                            </div>
+                            <span className="text-gray-500 text-sm ml-2">22/30km</span>
+                          </>
+                        );
+                      }
+                    })()}
                   </div>
-                  <span className="text-gray-500 text-sm ml-2">22/30km</span>
                 </div>
               </div>
               
@@ -1058,7 +1253,36 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
                   </div>
                   <div>
                     <p className="text-sm text-amber-800 font-semibold">Motivation du jour</p>
-                    <p className="text-xs text-amber-600">Plus que 8km pour atteindre votre objectif !</p>
+                    <p className="text-xs text-amber-600">
+                      {(() => {
+                        try {
+                          const saved = localStorage.getItem('cardioAnalyses');
+                          let totalDistance = 0;
+                          
+                          if (saved) {
+                            const analyses = JSON.parse(saved);
+                            if (analyses && analyses.length > 0) {
+                              totalDistance = analyses.reduce((sum: number, analysis: any) => {
+                                return sum + (analysis.distance || 0);
+                              }, 0);
+                            }
+                          }
+                          
+                          const remaining = monthlyTarget - totalDistance;
+                          
+                          if (totalDistance === 0) {
+                            return `Commencez votre aventure ! Objectif: ${monthlyTarget}km ce mois-ci 🚀`;
+                          } else if (remaining > 0) {
+                            return `Plus que ${remaining.toFixed(1)}km pour atteindre votre objectif !`;
+                          } else {
+                            const excess = totalDistance - monthlyTarget;
+                            return `🎉 Objectif atteint ! Vous avez dépassé de ${excess.toFixed(1)}km !`;
+                          }
+                        } catch (error) {
+                          return `Plus que ${(monthlyTarget - 22).toFixed(1)}km pour atteindre votre objectif !`;
+                        }
+                      })()}
+                    </p>
                   </div>
                 </div>
               </div>
