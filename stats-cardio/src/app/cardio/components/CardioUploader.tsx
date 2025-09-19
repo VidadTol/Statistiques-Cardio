@@ -56,6 +56,22 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
     setError(null);
     const finalSexe: 'M' | 'F' = sexe;
     let processedCount = 0;
+    // Récupérer les analyses déjà présentes dans le localStorage
+    let existingAnalyses: { date: string, distance: number }[] = [];
+    try {
+      const saved = localStorage.getItem('cardioAnalyses');
+      if (saved) {
+        const analyses = JSON.parse(saved);
+        if (Array.isArray(analyses)) {
+          existingAnalyses = analyses.map((a: any) => ({ date: a.date, distance: a.distance }));
+        }
+      }
+    } catch {}
+    // Sécurité : toujours un tableau
+    if (!Array.isArray(existingAnalyses)) {
+      existingAnalyses = [];
+    }
+
     filesToProcess.forEach((file) => {
       const reader = new FileReader();
       reader.onload = async (e) => {
@@ -179,68 +195,46 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
               }
             }
           }
-          const zoneDurations: { [key: string]: number } = {};
-          HEART_RATE_ZONES_CONFIG.forEach(zone => zoneDurations[zone.name] = 0);
-          if (trackpoints.length > 1) {
-            for (let i = 0; i < trackpoints.length - 1; i++) {
-              const currentTrackpoint = trackpoints[i];
-              const nextTrackpoint = trackpoints[i + 1];
-              const currentTime = new Date(currentTrackpoint.getElementsByTagName('Time')[0]?.textContent || '').getTime();
-              const nextTime = new Date(nextTrackpoint.getElementsByTagName('Time')[0]?.textContent || '').getTime();
-              if (isNaN(currentTime) || isNaN(nextTime)) continue;
-              const durationSegmentSeconds = (nextTime - currentTime) / 1000;
-              if (durationSegmentSeconds <= 0) continue;
-              const hrValue = parseFloat(currentTrackpoint.getElementsByTagName('HeartRateBpm')[0]?.getElementsByTagName('Value')[0]?.textContent || '0');
-              if (hrValue > 0) {
-                for (const zone of HEART_RATE_ZONES_CONFIG) {
-                  if (hrValue >= zone.minBpm && hrValue <= zone.maxBpm) {
-                    zoneDurations[zone.name] += durationSegmentSeconds;
-                    break;
-                  }
-                }
-              }
+          // Déduplication sur date + distance (tolérance 0.1km)
+          const distanceKm = totalDistanceMeters / 1000;
+          if (existingAnalyses && existingAnalyses.length > 0 && existingAnalyses.some(a => a.date === activityDate && Math.abs(a.distance - distanceKm) < 0.1)) {
+            setError('Séance déjà importée (même date et distance).');
+            processedCount++;
+            if (processedCount === filesToProcess.length) {
+              setLoading(false);
+              setFilesToProcess([]);
             }
+            return;
           }
-          const calculatedHeartRateZones: HeartRateZone[] = HEART_RATE_ZONES_CONFIG.map(zone => {
-            const duration = zoneDurations[zone.name] || 0;
-            const percentage = totalDurationSeconds > 0 ? (duration / totalDurationSeconds) * 100 : 0;
+          // Calcul des zones cardiaques
+          const totalSeconds = heartRateTimeline.length > 0 ? heartRateTimeline[heartRateTimeline.length - 1].elapsedSeconds : 0;
+          const zones = HEART_RATE_ZONES_CONFIG.map(zone => {
+            const durationSeconds = heartRateTimeline.filter(point => point.heartRate >= zone.minBpm && point.heartRate <= zone.maxBpm).length;
+            const percentage = totalSeconds > 0 ? Math.round((durationSeconds / totalSeconds) * 100) : 0;
             return {
               ...zone,
-              durationSeconds: Math.round(duration),
-              percentage: parseFloat(percentage.toFixed(1)),
+              durationSeconds,
+              percentage
             };
           });
-          const distanceKm = totalDistanceMeters / 1000;
-          const dureeHeures = totalDurationSeconds / 3600; 
-          const dureeMinutes = totalDurationSeconds / 60; 
-          let vo2MaxEstimate = 0;
-          if (distanceKm > 0 && dureeHeures > 0) {
-            const vitesseMoyenneKmH = distanceKm / dureeHeures;
-            const vmaEstimate = vitesseMoyenneKmH * 1.05; 
-            vo2MaxEstimate = vmaEstimate * 3.5;
-            if (finalSexe === 'F') {
-              vo2MaxEstimate = vo2MaxEstimate * 0.9;
-            }
-          }
-          const newAnalysis: CardioData = {
-            id: Math.random().toString(36).substring(7),
+          // Appel de la prop pour afficher et sauvegarder l'analyse
+          const newAnalyse: CardioData = {
+            id: `${Date.now()}-${Math.floor(Math.random()*100000)}`,
             date: activityDate,
-            dureeExercice: totalTimeSeconds / 60,
+            dureeExercice: Math.round(totalDurationSeconds/60),
             distance: distanceKm,
-            fcMax: maxHeartRate || 0,
-            frequenceCardio: Math.round(averageHeartRate),
-            calories: totalCalories || 0,
-            vitesseMoyenne: distanceKm > 0 && totalTimeSeconds > 0 ? (distanceKm / (totalTimeSeconds / 3600)) : 0,
-            vo2Max: Math.round(vo2MaxEstimate),
+            vitesseMoyenne: distanceKm / (totalDurationSeconds/3600),
+            frequenceCardio: heartRates.length > 0 ? Math.round(heartRates.reduce((sum, hr) => sum + hr, 0) / heartRates.length) : 0,
+            calories: totalCalories,
+            vo2Max: 0,
             notes: '',
-            type: 'Course',
-            terrain: 'Route',
-            intensite: 3,
-            heartRateTimeline: heartRateTimeline,
-            intervals: detectedIntervals,
-            fractionsCount: fractionsCount
+            heartRateZones: zones,
+            age: parseInt(age),
+            sexe: finalSexe,
+            type: '',
+            terrain: ''
           };
-          onAnalyseExtracted(newAnalysis);
+          onAnalyseExtracted(newAnalyse);
         } catch (err) {
           setError("Une erreur est survenue lors de l'analyse du fichier. Le fichier peut être corrompu.");
           console.error("Erreur de parsing TCX:", err);

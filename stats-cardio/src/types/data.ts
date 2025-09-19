@@ -44,4 +44,5 @@ export interface CardioData {
   heartRateTimeline?: HeartRatePoint[]; // Timeline détaillée FC
   intervals?: IntervalData[]; // Intervalles détectés (fractionné)
   fractionsCount?: number; // Nombre de fractions détectées
+  tcxHash?: string; // Hash du contenu TCX pour déduplication
 }

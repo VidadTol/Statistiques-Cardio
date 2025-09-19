@@ -17,10 +17,18 @@ export default function CardioPage() {
       const savedAnalyses = localStorage.getItem('cardioAnalyses');
       if (savedAnalyses) {
         const parsedAnalyses = JSON.parse(savedAnalyses);
-        setAnalyses(parsedAnalyses);
-        // Auto-sélectionner la dernière session si elle existe
-        if (parsedAnalyses.length > 0) {
-          setSelectedSessionIndex(parsedAnalyses.length - 1);
+        // Trie par date décroissante (format JJ/MM/AAAA)
+        const sorted = parsedAnalyses.sort((a: CardioData, b: CardioData) => {
+          const [da, ma, ya] = a.date.split('/').map(Number);
+          const [db, mb, yb] = b.date.split('/').map(Number);
+          const dateA = new Date(ya, ma - 1, da).getTime();
+          const dateB = new Date(yb, mb - 1, db).getTime();
+          return dateB - dateA;
+        });
+        setAnalyses(sorted);
+        // Sélectionner la plus récente
+        if (sorted.length > 0) {
+          setSelectedSessionIndex(0);
         }
       }
     } catch (error) {
@@ -42,8 +50,16 @@ export default function CardioPage() {
   const handleNewAnalyse = (newAnalyse: CardioData) => {
     setAnalyses(prev => {
       const updated = [...prev, newAnalyse];
-      setSelectedSessionIndex(updated.length - 1); // Sélectionner la nouvelle session
-      return updated;
+      // Trie par date décroissante
+      const sorted = updated.sort((a: CardioData, b: CardioData) => {
+        const [da, ma, ya] = a.date.split('/').map(Number);
+        const [db, mb, yb] = b.date.split('/').map(Number);
+        const dateA = new Date(ya, ma - 1, da).getTime();
+        const dateB = new Date(yb, mb - 1, db).getTime();
+        return dateB - dateA;
+      });
+      setSelectedSessionIndex(0); // Sélectionner la plus récente
+      return sorted;
     });
     setIsUploading(false);
   };
@@ -57,8 +73,9 @@ export default function CardioPage() {
   };
 
   const handleClearAllAnalyses = () => {
-    setAnalyses([]);
-    setSelectedSessionIndex(-1); // Retour aux données de démo
+  setAnalyses([]);
+  setSelectedSessionIndex(-1); // Retour aux données de démo
+  localStorage.removeItem('cardioAnalyses');
   };
 
   const currentData = selectedSessionIndex >= 0 && analyses[selectedSessionIndex] 
