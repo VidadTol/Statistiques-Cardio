@@ -28,7 +28,7 @@ export default function RepartitionZonesCardiaques({
 
   return (
     <div>
-      <div className="flex items-center gap-3 cursor-pointer" onClick={() => setOpenZones(o => !o)}>
+      <div className="flex items-center gap-3 cursor-pointer mb-6" onClick={() => setOpenZones(o => !o)}>
         <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -38,7 +38,7 @@ export default function RepartitionZonesCardiaques({
         <span className="ml-auto">{openZones ? '▲' : '▼'}</span>
       </div>
       {openZones && (
-        <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-4 border border-white/20 w-full max-w-xl mx-auto">
+        <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
           <div className="space-y-3">
             {zones.map(([zone, info]) => (
               <div
