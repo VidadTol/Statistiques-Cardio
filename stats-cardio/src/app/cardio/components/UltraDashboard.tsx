@@ -11,75 +11,15 @@ import MetriquesRecuperation from "./Sections/MetriquesRecuperation";
 import ProgressionComparaisons from "./Sections/ProgressionComparaisons";
 import AnalyseProgression from "./Sections/AnalyseProgression";
 import ObjectifsChallenges from "./Sections/ObjectifsChallenges";
+import HistoriqueSeances from "./Sections/HistoriqueSeances";
 import ExplanationModal from "./ExplanationModal";
 import { icons } from "./icons";
+import { calculateHeartRateZones } from "../utils/heartRateUtils";
 
 interface UltraDashboardProps {
   data: CardioData;
   previousData?: CardioData;
 }
-
-// Fonction pour calculer les zones cardiaques réelles
-const calculateHeartRateZones = (
-  heartRateTimeline: any[],
-  dureeExercice: number
-) => {
-  if (!heartRateTimeline || heartRateTimeline.length === 0) {
-    // Fallback avec des valeurs par défaut
-    return {
-      "VO2 Max": {
-        percentage: 15,
-        duration: Math.round(dureeExercice * 60 * 0.15),
-      },
-      Anaérobie: {
-        percentage: 35,
-        duration: Math.round(dureeExercice * 60 * 0.35),
-      },
-      Aérobie: {
-        percentage: 30,
-        duration: Math.round(dureeExercice * 60 * 0.3),
-      },
-      Intensif: {
-        percentage: 15,
-        duration: Math.round(dureeExercice * 60 * 0.15),
-      },
-      Léger: { percentage: 5, duration: Math.round(dureeExercice * 60 * 0.05) },
-    };
-  }
-
-  const zones = {
-    "VO2 Max": { count: 0, duration: 0 },
-    Anaérobie: { count: 0, duration: 0 },
-    Aérobie: { count: 0, duration: 0 },
-    Intensif: { count: 0, duration: 0 },
-    Léger: { count: 0, duration: 0 },
-  };
-
-  const totalPoints = heartRateTimeline.length;
-
-  heartRateTimeline.forEach((point) => {
-    const hr = point.heartRate;
-    if (hr >= 156) zones["VO2 Max"].count++;
-    else if (hr >= 139) zones["Anaérobie"].count++;
-    else if (hr >= 121) zones["Aérobie"].count++;
-    else if (hr >= 104) zones["Intensif"].count++;
-    else zones["Léger"].count++;
-  });
-
-  const result: any = {};
-  Object.keys(zones).forEach((zone) => {
-    const percentage =
-      totalPoints > 0
-        ? Math.round(
-            (zones[zone as keyof typeof zones].count / totalPoints) * 100
-          )
-        : 0;
-    const durationSeconds = Math.round((percentage / 100) * dureeExercice * 60);
-    result[zone] = { percentage, duration: durationSeconds };
-  });
-
-  return result;
-};
 
 export default function UltraDashboard({ data }: { data: CardioData }) {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
@@ -89,6 +29,7 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
   const [openProgression, setOpenProgression] = useState<boolean>(false);
   const [openAnalyse, setOpenAnalyse] = useState<boolean>(false);
   const [openObjectifs, setOpenObjectifs] = useState<boolean>(false);
+  const [openHistorique, setOpenHistorique] = useState<boolean>(false);
   const [mounted, setMounted] = useState(false);
   const [monthlyTarget, setMonthlyTarget] = useState<number>(30);
   const [isEditingTarget, setIsEditingTarget] = useState<boolean>(false);
@@ -410,6 +351,15 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
             isEditingTarget={isEditingTarget}
             setIsEditingTarget={setIsEditingTarget}
             handleTargetChange={handleTargetChange}
+          />
+        </div>
+
+        {/* Section 7: Historique des Séances */}
+        <div className="mt-6">
+          <HistoriqueSeances
+            openHistorique={openHistorique}
+            setOpenHistorique={setOpenHistorique}
+            currentSessionId={data.id}
           />
         </div>
       </div>
