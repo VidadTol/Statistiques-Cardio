@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from 'react';
 import UltraDashboard from './components/UltraDashboard';
-import { mockSessionData } from './data/mockData';
 import CardioUploader from './components/CardioUploader';
 import { CardioData } from '@/types/data';
 
@@ -63,8 +62,8 @@ export default function CardioPage() {
   };
 
   const currentData = selectedSessionIndex >= 0 && analyses[selectedSessionIndex] 
-    ? analyses[selectedSessionIndex] 
-    : mockSessionData;
+  ? analyses[selectedSessionIndex] 
+  : null;
   
   const previousData = selectedSessionIndex > 0 && analyses[selectedSessionIndex - 1]
     ? analyses[selectedSessionIndex - 1]
@@ -93,7 +92,7 @@ export default function CardioPage() {
                   onChange={(e) => setSelectedSessionIndex(parseInt(e.target.value))}
                   className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value={-1}>🎭 Données de démo</option>
+                  {/* Option démo supprimée */}
                   {analyses.map((analysis, index) => (
                     <option key={analysis.id} value={index}>
                       📊 {analysis.date} - {analysis.distance.toFixed(1)}km
@@ -150,10 +149,13 @@ export default function CardioPage() {
       )}
 
       {/* Le Dashboard Ultra-Moderne */}
-      <UltraDashboard 
-        data={currentData}
-      />
-      
+      {currentData ? (
+        <UltraDashboard data={currentData} />
+      ) : (
+        <div className="text-center text-gray-500 py-12">
+          Aucune séance disponible. Importez un fichier TCX pour commencer !
+        </div>
+      )}
     </div>
   );
 }

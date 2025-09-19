@@ -23,7 +23,7 @@ const LOCAL_STORAGE_KEY_SEX = 'userSexe';
 export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fileToProcess, setFileToProcess] = useState<File | null>(null);
+  const [filesToProcess, setFilesToProcess] = useState<File[]>([]);
   const [age, setAge] = useState('');
   const [sexe, setSexe] = useState<'M' | 'F' | ''>('');
 
@@ -36,18 +36,17 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
   }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (!file.name.endsWith('.tcx')) {
-        setError('Format de fichier invalide. Veuillez sélectionner un fichier .tcx.');
-        return;
-      }
-      setFileToProcess(file);
+    const files = Array.from(event.target.files ?? []);
+    const validFiles = files.filter(file => file.name.endsWith('.tcx'));
+    if (validFiles.length === 0) {
+      setError('Format de fichier invalide. Veuillez sélectionner des fichiers .tcx.');
+      return;
     }
+    setFilesToProcess(validFiles);
   };
 
   const handleAnalyse = () => {
-    if (!fileToProcess || !age || (sexe !== 'M' && sexe !== 'F')) {
+    if (filesToProcess.length === 0 || !age || (sexe !== 'M' && sexe !== 'F')) {
       setError('Veuillez remplir toutes les informations utilisateur.');
       return;
     }
@@ -181,7 +180,7 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
         const totalTimeSeconds = heartRateTimeline.length > 0 ? heartRateTimeline[heartRateTimeline.length - 1].elapsedSeconds : 0;
 
         // Extraction de la date depuis le nom du fichier (formats supportés)
-        const fileName = fileToProcess.name;
+        const fileName = filesToProcess[0].name;
         let activityDate = new Date().toLocaleDateString(); // fallback sur aujourd'hui
         
         // Essayer différents formats de date dans le nom de fichier
@@ -297,15 +296,15 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
         console.error("Erreur de parsing TCX:", err);
       } finally {
         setLoading(false);
-        setFileToProcess(null);
+        setFilesToProcess([]);
       }
     };
-    reader.readAsText(fileToProcess);
+    reader.readAsText(filesToProcess[0]);
   };
 
   return (
     <div className="flex flex-col items-center justify-center p-8 bg-gray-50 border border-dashed border-gray-300 rounded-lg shadow-inner">
-      {!fileToProcess ? (
+      {filesToProcess.length === 0 ? (
         <>
           <label htmlFor="tcx-file-upload" className="cursor-pointer">
             <div className="flex flex-col items-center">
@@ -321,6 +320,7 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
           <input
             id="tcx-file-upload"
             type="file"
+            multiple
             onChange={handleFileChange}
             className="hidden"
           />
@@ -329,7 +329,7 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
         <div className="w-full max-w-sm p-4 bg-white rounded-lg shadow-md border border-gray-200">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-semibold text-lg">Informations utilisateur</h3>
-            <button onClick={() => setFileToProcess(null)}>
+            <button onClick={() => setFilesToProcess([])}>
               <XCircle className="h-6 w-6 text-gray-400 hover:text-gray-600" />
             </button>
           </div>

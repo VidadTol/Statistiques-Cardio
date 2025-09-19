@@ -5,7 +5,6 @@ import React, { useState, useEffect } from 'react';
 import { CardioData } from '../../../types/data';
 import MetricCard from './MetricCard';
 import ProgressRing from './ProgressRing';
-import { MockCardioData } from '../data/mockData';
 
 // Icons (remplacements simples des Lucide icons pour éviter les dépendances)
 const icons = {
@@ -56,8 +55,8 @@ const icons = {
 };
 
 interface UltraDashboardProps {
-  data: MockCardioData;
-  previousData?: MockCardioData;
+  data: CardioData;
+  previousData?: CardioData;
 }
 
 // Définitions des zones cardiaques
