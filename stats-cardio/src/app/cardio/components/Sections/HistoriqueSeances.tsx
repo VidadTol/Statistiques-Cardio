@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { CardioData } from "../../../../types/data";
+import { icons } from "../icons"
 
 interface HistoriqueSeancesProps {
   openHistorique: boolean;
@@ -217,34 +218,34 @@ export default function HistoriqueSeances({
   return (
     <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
       {/* Header avec toggle */}
-      <div
-        className="flex items-center justify-between cursor-pointer group"
-        onClick={() => setOpenHistorique(!openHistorique)}
+      <div 
+        className="flex items-center gap-3 mb-6 cursor-pointer group"
+        onClick={() => setOpenHistorique(o => !o)}
       >
-        <div className="flex items-center space-x-3">
-          <div className="text-2xl">📋</div>
-          <h2 className="text-2xl font-semibold text-gray-800">
-            Historique des Séances
-          </h2>
-          <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
-            {seances.length} séance{seances.length > 1 ? "s" : ""}
-          </span>
+        <div className="w-10 h-10 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-600 group-hover:bg-slate-200 transition-colors">
+          {icons.table}
         </div>
-        <div
-          className={`transform transition-transform duration-300 ${
-            openHistorique ? "rotate-180" : "" }`} >
-          <svg
-            className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
-          </svg>
+        <h2 className="text-2xl font-semibold text-gray-800 flex-1">
+          Historique des Séances
+        </h2>
+        <span className="bg-slate-500 text-white text-sm px-3 py-1 rounded-full">
+          {seances.length} séances
+        </span>
+        <div className="w-6 h-6 text-gray-600 transition-transform duration-200">
+          {openHistorique ? icons.arrowUp : icons.arrowDown}
         </div>
       </div>
       {/* Statistiques globales */}
       {globalStats && (
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 mt-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            📊 Statistiques globales
-          </h3>
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center text-green-600">
+              {icons.analytics}
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800">
+              Statistiques Globales
+            </h3>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
@@ -324,48 +325,104 @@ export default function HistoriqueSeances({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th
-                        className="text-left p-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                        onClick={() => handleSort("date")}
+                      <th 
+                        className="text-left p-3 cursor-pointer hover:bg-gray-50 transition-colors select-none group"
+                        onClick={() => handleSort('date')}
                       >
-                        Date {getSortIcon("date")}
+                        <div className="flex items-center gap-2">
+                          Date
+                          <div className="w-4 h-4 text-gray-400 group-hover:text-gray-600">
+                            {sortField === 'date' 
+                              ? (sortDirection === 'asc' ? icons.arrowUp : icons.arrowDown)
+                              : icons.arrowUpDown
+                            }
+                          </div>
+                        </div>
                       </th>
                       <th className="text-left p-3">Type</th>
-                      <th
-                        className="text-left p-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                        onClick={() => handleSort("distance")}
+                      <th 
+                        className="text-left p-3 cursor-pointer hover:bg-gray-50 transition-colors select-none group"
+                        onClick={() => handleSort('distance')}
                       >
-                        Distance {getSortIcon("distance")}
+                        <div className="flex items-center gap-2">
+                          Distance
+                          <div className="w-4 h-4 text-gray-400 group-hover:text-gray-600">
+                            {sortField === 'distance' 
+                              ? (sortDirection === 'asc' ? icons.arrowUp : icons.arrowDown)
+                              : icons.arrowUpDown
+                            }
+                          </div>
+                        </div>
                       </th>
-                      <th
-                        className="text-left p-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                        onClick={() => handleSort("dureeExercice")}
+                      <th 
+                        className="text-left p-3 cursor-pointer hover:bg-gray-50 transition-colors select-none group"
+                        onClick={() => handleSort('dureeExercice')}
                       >
-                        Durée {getSortIcon("dureeExercice")}
+                        <div className="flex items-center gap-2">
+                          Durée
+                          <div className="w-4 h-4 text-gray-400 group-hover:text-gray-600">
+                            {sortField=== 'dureeExercice' 
+                              ? (sortDirection === 'asc' ? icons.arrowUp : icons.arrowDown)
+                              : icons.arrowUpDown
+                            }
+                          </div>
+                        </div>
                       </th>
                       <th
                         className="text-left p-3 cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => handleSort("frequenceCardio")}
                       >
-                        FC Moy {getSortIcon("frequenceCardio")}
+                        <div className="flex items-center gap-2">
+                        FC Moy 
+                        <div className="w-4 h-4 text-gray-400 group-hover:text-gray-600">
+                            {sortField=== 'frequenceCardio' 
+                              ? (sortDirection === 'asc' ? icons.arrowUp : icons.arrowDown)
+                              : icons.arrowUpDown
+                            }
+                          </div>
+                        </div>
                       </th>
                       <th
                         className="text-left p-3 cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => handleSort("fcMax")}
                       >
-                        FC Max {getSortIcon("fcMax")}
+                        <div className="flex items-center gap-2">
+                        FC Max
+                        <div className="w-4 h-4 text-gray-400 group-hover:text-gray-600">
+                            {sortField=== 'fcMax' 
+                              ? (sortDirection === 'asc' ? icons.arrowUp : icons.arrowDown)
+                              : icons.arrowUpDown
+                            }
+                          </div>
+                        </div>
                       </th>
                       <th
                         className="text-left p-3 cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => handleSort("calories")}
                       >
-                        Calories {getSortIcon("calories")}
+                        <div className="flex items-center gap-2">
+                          Calories
+                          <div className="w-4 h-4 text-gray-400 group-hover:text-gray-600">
+                            {sortField=== 'calories' 
+                              ? (sortDirection === 'asc' ? icons.arrowUp : icons.arrowDown)
+                              : icons.arrowUpDown
+                            }
+                          </div>
+                        </div>
                       </th>
                       <th
                         className="text-left p-3 cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => handleSort("vitesseMoyenne")}
                       >
-                        Vitesse {getSortIcon("vitesseMoyenne")}
+                        <div className="flex items-center gap-2">
+                          Vitesse
+                          <div className="w-4 h-4 text-gray-400 group-hover:text-gray-600">
+                            {sortField=== 'vitesseMoyenne' 
+                              ? (sortDirection === 'asc' ? icons.arrowUp : icons.arrowDown)
+                              : icons.arrowUpDown
+                            }
+                          </div>
+                        </div>
                       </th>
                       <th className="text-left p-3">Actions</th>
                     </tr>
@@ -419,26 +476,14 @@ export default function HistoriqueSeances({
                           {seance.vitesseMoyenne.toFixed(1)} km/h
                         </td>
                         <td className="p-3">
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => setEditingType(seance.id)}
-                              className="text-green-600 hover:text-green-800 transition-colors"
-                              title="Modifier le type de sport"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              className="text-blue-600 hover:text-blue-800 transition-colors"
-                              title="Voir détails"
-                            >
-                              👁️
-                            </button>
+                          <div className="flex gap-2">
                             <button
                               onClick={() => handleDelete(seance.id)}
-                              className="text-red-600 hover:text-red-800 transition-colors"
-                              title="Supprimer"
-                            >
-                              🗑️
+                              className="w-8 h-8 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg flex items-center justify-center transition-colors"
+                              title="Supprimer">
+                              <div className="w-4 h-4">
+                                {icons.trash}
+                              </div>
                             </button>
                           </div>
                         </td>
