@@ -1,4 +1,3 @@
-// src/components/CardioUploader.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -86,8 +85,7 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
           const totalDistanceMeters = laps.reduce((sum, lap) => sum + parseFloat(lap.getElementsByTagName('DistanceMeters')[0]?.textContent || '0'), 0);
           const totalCalories = laps.reduce((sum, lap) => sum + parseFloat(lap.getElementsByTagName('Calories')[0]?.textContent || '0'), 0);
           const totalDurationSeconds = laps.reduce((sum, lap) => sum + parseFloat(lap.getElementsByTagName('TotalTimeSeconds')[0]?.textContent || '0'), 0);
-          const maxHeartRateElement = laps[0]?.getElementsByTagName('MaximumHeartRateBpm')[0]?.getElementsByTagName('Value')[0];
-          const maxHeartRate = maxHeartRateElement ? parseFloat(maxHeartRateElement.textContent || '0') : 0;
+          
           const trackpoints = Array.from(xmlDoc.getElementsByTagName('Trackpoint'));
           const heartRateTimeline: HeartRatePoint[] = [];
           const activityStartTime = trackpoints[0]?.getElementsByTagName('Time')[0]?.textContent;
@@ -111,6 +109,8 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
           });
           const heartRates = heartRateTimeline.map(point => point.heartRate);
           const averageHeartRate = heartRates.length > 0 ? heartRates.reduce((sum, hr) => sum + hr, 0) / heartRates.length : 0;
+          const maxHeartRate = heartRates.length > 0 ? Math.max(...heartRates) : 0;
+          
           const detectIntervals = (timeline: HeartRatePoint[]): IntervalData[] => {
             if (timeline.length < 10) return [];
             const intervals: IntervalData[] = [];
@@ -190,7 +190,7 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
               if (dateObj.getFullYear() == parseInt(year) && 
                   dateObj.getMonth() == parseInt(month) - 1 && 
                   dateObj.getDate() == parseInt(day)) {
-                activityDate = `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+                activityDate = `${String(parseInt(day)).padStart(2, '0')}/${String(parseInt(month)).padStart(2, '0')}/${year}`;
                 break;
               }
             }
@@ -225,6 +225,7 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
             distance: distanceKm,
             vitesseMoyenne: distanceKm / (totalDurationSeconds/3600),
             frequenceCardio: heartRates.length > 0 ? Math.round(heartRates.reduce((sum, hr) => sum + hr, 0) / heartRates.length) : 0,
+            fcMax: maxHeartRate,
             calories: totalCalories,
             vo2Max: 0,
             notes: '',
