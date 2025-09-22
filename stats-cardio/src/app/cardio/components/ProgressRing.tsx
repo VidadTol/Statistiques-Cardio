@@ -57,11 +57,9 @@ export default function ProgressRing({
           fill="none"
           strokeLinecap="round"
           strokeDasharray={circumference}
-          strokeDashoffset={animate ? strokeDashoffset : circumference}
-          className={animate ? "animate-[drawProgress_2s_ease-out_forwards]" : ""}
           style={{
             strokeDashoffset: animate ? strokeDashoffset : circumference,
-            transition: animate ? 'stroke-dashoffset 2s ease-out' : 'none'
+            transition: animate ? 'stroke-dashoffset 1.5s ease-out' : 'none'
           }}
         />
       </svg>
@@ -79,17 +77,7 @@ export default function ProgressRing({
           </span>
         )}
       </div>
-      
-      <style jsx>{`
-        @keyframes drawProgress {
-          from {
-            stroke-dashoffset: ${circumference};
-          }
-          to {
-            stroke-dashoffset: ${strokeDashoffset};
-          }
-        }
-      `}</style>
+
     </div>
   );
 }

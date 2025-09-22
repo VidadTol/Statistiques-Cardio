@@ -218,6 +218,38 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
             };
           });
           // Appel de la prop pour afficher et sauvegarder l'analyse
+          // Calcul du VO2 Max basé sur plusieurs méthodes
+          const vitesseMoyenneKmh = distanceKm / (totalDurationSeconds / 3600);
+          const vitesseMoyenneMs = vitesseMoyenneKmh / 3.6; // conversion en m/s
+          const fcMoyenne = heartRates.length > 0 ? Math.round(heartRates.reduce((sum, hr) => sum + hr, 0) / heartRates.length) : 0;
+          const fcMaxTheorique = 220 - parseInt(age);
+          
+          // Méthode 1: Formule de Jack Daniels (pour la course)
+          const vo2MaxDaniels = vitesseMoyenneMs > 0 ? Math.round(15.3 * vitesseMoyenneMs) : 0;
+          
+          // Méthode 2: Formule basée sur FC de réserve (Karvonen)
+          const fcRepos = 60; // FC de repos estimée
+          const fcReserve = fcMaxTheorique - fcRepos;
+          const intensiteFc = fcMoyenne > fcRepos ? Math.min(100, ((fcMoyenne - fcRepos) / fcReserve) * 100) : 0;
+          const vo2MaxKarvonen = Math.round(15 + (intensiteFc * 0.4));
+          
+          // Méthode 3: Formule ACSM pour la course
+          const vo2MaxACSM = vitesseMoyenneMs > 0 ? Math.round((vitesseMoyenneMs * 3.5) + 3.5) : 0;
+          
+          // Moyenne pondérée des méthodes (privilégier Daniels si vitesse disponible)
+          let estimatedVO2Max;
+          if (vitesseMoyenneMs > 2 && vitesseMoyenneMs < 8) { // Vitesse réaliste pour course (7-30 km/h)
+            estimatedVO2Max = Math.round((vo2MaxDaniels * 0.4) + (vo2MaxKarvonen * 0.3) + (vo2MaxACSM * 0.3));
+          } else {
+            estimatedVO2Max = vo2MaxKarvonen; // Fallback sur méthode FC
+          }
+          
+          // Estimation de l'intensité basée sur les zones cardiaques (zones 4 et 5 = haute intensité)
+          const highIntensityZones = zones.filter(z => z.name.includes('Anaérobie') || z.name.includes('VO2'));
+          const highIntensityTime = highIntensityZones.reduce((sum, z) => sum + z.durationSeconds, 0);
+          const totalTime = zones.reduce((sum, z) => sum + z.durationSeconds, 0);
+          const intensityLevel = totalTime > 0 ? Math.min(5, Math.max(1, Math.round((highIntensityTime / totalTime) * 5) + 2)) : 3;
+
           const newAnalyse: CardioData = {
             id: `${Date.now()}-${Math.floor(Math.random()*100000)}`,
             date: activityDate,
@@ -227,7 +259,8 @@ export default function CardioUploader({ onAnalyseExtracted }: CardioUploaderPro
             frequenceCardio: heartRates.length > 0 ? Math.round(heartRates.reduce((sum, hr) => sum + hr, 0) / heartRates.length) : 0,
             fcMax: maxHeartRate,
             calories: totalCalories,
-            vo2Max: 0,
+            vo2Max: estimatedVO2Max,
+            intensite: intensityLevel,
             notes: '',
             heartRateZones: zones,
             age: parseInt(age),

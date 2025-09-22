@@ -106,7 +106,7 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
   const effortIntervals =
     data.intervals?.filter((i: any) => i.type === "effort") || [];
   const intensityPercentage = ((data.intensite || 3) / 5) * 100;
-  const vo2Percentage = Math.min((data.vo2Max / 50) * 100, 100); // VO2 Max sur 50 pour une personne normale
+  const vo2Percentage = Math.min(((data.vo2Max || 0) / 60) * 100, 100); // VO2 Max sur 60 ml/kg/min (bon niveau sportif)
   const fcMaxPercentage = Math.min(((data.fcMax || 180) / 200) * 100, 100); // FC Max sur 200 bpm
 
   return (
@@ -140,7 +140,7 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
               />
               <div>
                 <p className="font-semibold text-gray-800">
-                  {data.intensite}/5
+                  {data.intensite || 3}/5
                 </p>
                 <p className="text-sm text-gray-500">Niveau d'effort</p>
               </div>
@@ -185,7 +185,9 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
                 label="VO2 Max"
               />
               <div>
-                <p className="font-semibold text-gray-800">{data.vo2Max}%</p>
+                <p className="font-semibold text-gray-800">
+                  {data.vo2Max && data.vo2Max > 0 ? `${data.vo2Max} ml/kg/min` : 'N/A'}
+                </p>
                 <p className="text-sm text-gray-500">Capacité aérobie</p>
               </div>
             </div>
