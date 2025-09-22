@@ -10,7 +10,7 @@ interface HistoriqueSeancesProps {
   currentSessionId?: string; // Pour exclure la séance actuelle
 }
 
-type SortField = 'date' | 'distance' | 'dureeExercice' | 'frequenceCardio' | 'calories' | 'vitesseMoyenne';
+type SortField = 'date' | 'distance' | 'dureeExercice' | 'fcMax' | 'frequenceCardio' | 'calories' | 'vitesseMoyenne';
 type SortDirection = 'asc' | 'desc';
 
 // Types de sport disponibles
@@ -31,78 +31,10 @@ export default function HistoriqueSeances({
   const [filterType, setFilterType] = useState<string>('all');
   const [editingType, setEditingType] = useState<string | null>(null);
 
-  // Fonction pour ajouter des séances manquantes
-  const addMissingSession = (sessionData: Partial<CardioData>) => {
-    try {
-      const saved = localStorage.getItem("cardioAnalyses");
-      const analyses = saved ? JSON.parse(saved) as CardioData[] : [];
-      
-      // Vérifier si la séance existe déjà
-      const exists = analyses.some(seance => 
-        seance.date === sessionData.date && 
-        seance.type === sessionData.type &&
-        seance.distance === sessionData.distance
-      );
-      
-      if (!exists) {
-        const newSession: CardioData = {
-          id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          date: sessionData.date || '',
-          type: sessionData.type || 'Course',
-          dureeExercice: sessionData.dureeExercice || 0,
-          distance: sessionData.distance || 0,
-          vitesseMoyenne: sessionData.distance && sessionData.dureeExercice 
-            ? (sessionData.distance / (sessionData.dureeExercice / 60)) 
-            : 0,
-          frequenceCardio: sessionData.frequenceCardio || 140,
-          fcMax: sessionData.fcMax || 170,
-          calories: sessionData.calories || Math.round((sessionData.distance || 0) * 65),
-          vo2Max: sessionData.vo2Max || 35,
-          intensite: sessionData.intensite || 3,
-          notes: sessionData.notes || '',
-          ...sessionData
-        };
-        
-        analyses.push(newSession);
-        localStorage.setItem("cardioAnalyses", JSON.stringify(analyses));
-        console.log(`Séance ajoutée: ${newSession.date} - ${newSession.type} - ${newSession.distance}km`);
-      }
-    } catch (error) {
-      console.error("Erreur ajout séance:", error);
-    }
-  };
-
   // Charger les séances depuis localStorage
   useEffect(() => {
     const loadSeances = () => {
       try {
-        // Ajouter les séances manquantes du 16/09/2025
-        addMissingSession({
-          date: "16/09/2025",
-          type: "Vélo",
-          distance: 2.7,
-          dureeExercice: 15, // estimation 15 minutes
-          frequenceCardio: 135,
-          fcMax: 165,
-          calories: 180,
-          vo2Max: 32,
-          intensite: 3,
-          notes: "Séance vélo du 16/09"
-        });
-
-        addMissingSession({
-          date: "16/09/2025",
-          type: "Foot",
-          distance: 3.7,
-          dureeExercice: 45, // estimation 45 minutes
-          frequenceCardio: 155,
-          fcMax: 185,
-          calories: 350,
-          vo2Max: 38,
-          intensite: 4,
-          notes: "Séance football du 16/09"
-        });
-
         const saved = localStorage.getItem("cardioAnalyses");
         if (saved) {
           const analyses = JSON.parse(saved) as CardioData[];
@@ -344,7 +276,12 @@ export default function HistoriqueSeances({
                       >
                         FC Moy {getSortIcon('frequenceCardio')}
                       </th>
-                      <th className="text-left p-3">FC Max</th>
+                      <th
+  className="text-left p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+  onClick={() => handleSort('fcMax')}
+>
+  FC Max {getSortIcon('fcMax')}
+</th>
                       <th 
                         className="text-left p-3 cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => handleSort('calories')}

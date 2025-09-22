@@ -359,7 +359,6 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
           <HistoriqueSeances
             openHistorique={openHistorique}
             setOpenHistorique={setOpenHistorique}
-            currentSessionId={data.id}
           />
         </div>
       </div>
