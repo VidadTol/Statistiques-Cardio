@@ -49,7 +49,7 @@ export default function Navbar({
               {!isUploading && (
                 <button
                   onClick={handleStartUpload}
-                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg transition-all duration-200 flex items-center gap-2 cursor-pointer"
+                  className="px-4 py-2 font-bold bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg transition-all duration-200 flex items-center gap-2 cursor-pointer"
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -68,7 +68,7 @@ export default function Navbar({
               {analyses.length > 0 && (
                 <button
                   onClick={handleClearAllAnalyses}
-                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 flex items-center gap-2 cursor-pointer"
+                  className="px-4 py-2 font-bold bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 text-white rounded-lg transition-all duration-200 flex items-center gap-2 cursor-pointer"
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -87,7 +87,7 @@ export default function Navbar({
               {/* Bouton pour revenir à la page principale */}
               <Link
                 href="/"
-                className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 flex items-center gap-2 cursor-pointer"
+                className="px-4 py-2 font-bold bg-gradient-to-r from-gray-400 to-gray-700 hover:from-gray-600 hover:to-gray-800 text-white rounded-lg transition-colors duration-200 flex items-center gap-2 cursor-pointer"
               >
                 Retour à la page principale
               </Link>
