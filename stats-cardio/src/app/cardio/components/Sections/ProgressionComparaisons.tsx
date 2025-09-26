@@ -1,12 +1,89 @@
 import React from 'react';
+import { CardioData } from '../../../../types/data';
 
 interface Props {
+  data: CardioData;
+  previousData: CardioData[];
   setSelectedZone: (zone: string) => void;
   openProgression: boolean;
   setOpenProgression: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default function ProgressionComparaisons({ setSelectedZone, openProgression, setOpenProgression }: Props) {
+export default function ProgressionComparaisons({ data, previousData, setSelectedZone, openProgression, setOpenProgression }: Props) {
+  // FILTRER par type d'activité - ne comparer que les séances du même type
+  const currentType = data.type || 'Course'; // Défaut si pas de type
+  const sameSportData = previousData.filter(d => (d.type || 'Course') === currentType);
+  
+  // Debug pour voir les données reçues
+  console.log("DEBUG ProgressionComparaisons:", {
+    currentData: data.id,
+    currentType,
+    totalPreviousData: previousData.length,
+    sameSportDataLength: sameSportData.length,
+    allTypes: [...new Set(previousData.map(d => d.type || 'Course'))]
+  });
+
+  // Calculs de progression basés sur VOS vraies données TCX DU MÊME SPORT
+  const lastData = sameSportData && sameSportData.length > 0 ? sameSportData[0] : null; // Prendre la première (plus récente)
+  const recentData = sameSportData ? sameSportData.slice(0, 5) : []; // 5 dernières séances du même sport
+  
+  // Si pas de données précédentes, afficher les valeurs actuelles comme baseline
+  const isFirstSession = !lastData;
+  
+  // Calculs de progression par rapport à la dernière séance
+  const distanceEvolution = lastData ? ((data.distance - lastData.distance) / lastData.distance) * 100 : 0;
+  const fcMaxEvolution = lastData ? (data.fcMax || 0) - (lastData.fcMax || 0) : 0;
+  const vitesseEvolution = lastData ? ((data.vitesseMoyenne - lastData.vitesseMoyenne) / lastData.vitesseMoyenne) * 100 : 0;
+  const caloriesEvolution = lastData ? ((data.calories - lastData.calories) / lastData.calories) * 100 : 0;
+
+  console.log("DEBUG evolutions vs dernière:", {
+    lastData: lastData ? lastData.id : null,
+    distanceEvolution,
+    fcMaxEvolution, 
+    vitesseEvolution,
+    currentValues: {
+      distance: data.distance,
+      fcMax: data.fcMax,
+      vitesse: data.vitesseMoyenne
+    },
+    lastValues: lastData ? {
+      distance: lastData.distance,
+      fcMax: lastData.fcMax,
+      vitesse: lastData.vitesseMoyenne
+    } : null
+  });
+
+  // Progression moyenne sur les 5 dernières séances
+  let progressionMoyenneDistance = 0;
+  if (recentData.length >= 2) {
+    // Prendre la plus ancienne des 5 dernières vs actuelle
+    const oldestInRecent = recentData[recentData.length - 1].distance;
+    const currentDistance = data.distance;
+    progressionMoyenneDistance = ((currentDistance - oldestInRecent) / oldestInRecent) * 100;
+    
+    console.log("DEBUG progression distance:", {
+      oldestDistance: oldestInRecent,
+      currentDistance,
+      progression: progressionMoyenneDistance
+    });
+  } else if (isFirstSession) {
+    // Pour la première séance, montrer la distance comme baseline
+    progressionMoyenneDistance = data.distance;
+  }
+
+  // Calcul du nombre d'améliorations vs dernière séance
+  let nbAmeliorations = 0;
+  if (distanceEvolution > 0) nbAmeliorations++;
+  if (fcMaxEvolution > 0) nbAmeliorations++;
+  if (vitesseEvolution > 0) nbAmeliorations++;
+  if (caloriesEvolution > 0) nbAmeliorations++;
+
+  // Formatage des valeurs pour l'affichage
+  const formatEvolution = (value: number, decimals: number = 0) => {
+    if (value > 0) return `+${value.toFixed(decimals)}`;
+    return value.toFixed(decimals);
+  };
+
   return (
     <section>
       {/* En-tête cliquable */}
@@ -64,12 +141,20 @@ export default function ProgressionComparaisons({ setSelectedZone, openProgressi
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="px-3 py-1 bg-emerald-100 rounded-full">
-                  <span className="text-emerald-700 font-bold text-sm">
-                    +12%
+                <div className={`px-3 py-1 rounded-full ${
+                  isFirstSession ? 'bg-blue-100' : 
+                  progressionMoyenneDistance > 0 ? 'bg-emerald-100' : 
+                  progressionMoyenneDistance < 0 ? 'bg-red-100' : 'bg-gray-100'
+                }`}>
+                  <span className={`font-bold text-sm ${
+                    isFirstSession ? 'text-blue-700' : 
+                    progressionMoyenneDistance > 0 ? 'text-emerald-700' : 
+                    progressionMoyenneDistance < 0 ? 'text-red-700' : 'text-gray-700'
+                  }`}>
+                    {isFirstSession ? `${data.distance.toFixed(1)}km` : `${formatEvolution(progressionMoyenneDistance)}%`}
                   </span>
                 </div>
-                <span className="text-gray-500 text-sm">/semaine</span>
+                <span className="text-gray-500 text-sm">{isFirstSession ? 'baseline' : 'sur 5 séances'}</span>
               </div>
             </div>
 
@@ -101,10 +186,20 @@ export default function ProgressionComparaisons({ setSelectedZone, openProgressi
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="px-3 py-1 bg-rose-100 rounded-full">
-                  <span className="text-rose-700 font-bold text-sm">+8</span>
+                <div className={`px-3 py-1 rounded-full ${
+                  isFirstSession ? 'bg-rose-100' : 
+                  fcMaxEvolution > 0 ? 'bg-rose-100' : 
+                  fcMaxEvolution < 0 ? 'bg-blue-100' : 'bg-gray-100'
+                }`}>
+                  <span className={`font-bold text-sm ${
+                    isFirstSession ? 'text-rose-700' : 
+                    fcMaxEvolution > 0 ? 'text-rose-700' : 
+                    fcMaxEvolution < 0 ? 'text-blue-700' : 'text-gray-700'
+                  }`}>
+                    {isFirstSession ? `${data.fcMax || 'N/A'}` : `${fcMaxEvolution > 0 ? '+' : ''}${fcMaxEvolution}`}
+                  </span>
                 </div>
-                <span className="text-gray-500 text-sm">bpm</span>
+                <span className="text-gray-500 text-sm">bpm{isFirstSession ? ' max' : ''}</span>
               </div>
             </div>
 
@@ -136,12 +231,20 @@ export default function ProgressionComparaisons({ setSelectedZone, openProgressi
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="px-3 py-1 bg-blue-100 rounded-full">
-                  <span className="text-blue-700 font-bold text-sm">
-                    +0.3
+                <div className={`px-3 py-1 rounded-full ${
+                  isFirstSession ? 'bg-blue-100' : 
+                  vitesseEvolution > 0 ? 'bg-blue-100' : 
+                  vitesseEvolution < 0 ? 'bg-orange-100' : 'bg-gray-100'
+                }`}>
+                  <span className={`font-bold text-sm ${
+                    isFirstSession ? 'text-blue-700' : 
+                    vitesseEvolution > 0 ? 'text-blue-700' : 
+                    vitesseEvolution < 0 ? 'text-orange-700' : 'text-gray-700'
+                  }`}>
+                    {isFirstSession ? `${data.vitesseMoyenne.toFixed(1)}` : `${formatEvolution(vitesseEvolution, 1)}%`}
                   </span>
                 </div>
-                <span className="text-gray-500 text-sm">km/h</span>
+                <span className="text-gray-500 text-sm">{isFirstSession ? 'km/h' : 'vs dernière'}</span>
               </div>
             </div>
 
@@ -173,15 +276,35 @@ export default function ProgressionComparaisons({ setSelectedZone, openProgressi
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="px-3 py-1 bg-purple-100 rounded-full">
-                  <span className="text-purple-700 font-bold text-sm">4</span>
+                <div className={`px-3 py-1 rounded-full ${
+                  nbAmeliorations >= 3 ? 'bg-purple-100' : 
+                  nbAmeliorations >= 2 ? 'bg-green-100' : 
+                  nbAmeliorations >= 1 ? 'bg-yellow-100' : 'bg-gray-100'
+                }`}>
+                  <span className={`font-bold text-sm ${
+                    nbAmeliorations >= 3 ? 'text-purple-700' : 
+                    nbAmeliorations >= 2 ? 'text-green-700' : 
+                    nbAmeliorations >= 1 ? 'text-yellow-700' : 'text-gray-700'
+                  }`}>
+                    {nbAmeliorations}
+                  </span>
                 </div>
                 <span className="text-gray-500 text-sm">améliorations</span>
               </div>
             </div>
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 mt-4 border border-purple-100">
+            <div className={`bg-gradient-to-r rounded-xl p-4 mt-4 border ${
+              nbAmeliorations >= 3 ? 'from-purple-50 to-pink-50 border-purple-100' : 
+              nbAmeliorations >= 2 ? 'from-green-50 to-emerald-50 border-green-100' : 
+              nbAmeliorations >= 1 ? 'from-yellow-50 to-orange-50 border-yellow-100' : 
+              'from-gray-50 to-slate-50 border-gray-100'
+            }`}>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                <div className={`w-8 h-8 bg-gradient-to-br rounded-lg flex items-center justify-center ${
+                  nbAmeliorations >= 3 ? 'from-purple-500 to-pink-500' : 
+                  nbAmeliorations >= 2 ? 'from-green-500 to-emerald-500' : 
+                  nbAmeliorations >= 1 ? 'from-yellow-500 to-orange-500' : 
+                  'from-gray-500 to-slate-500'
+                }`}>
                   <svg
                     className="w-4 h-4 text-white"
                     fill="none"
@@ -192,16 +315,30 @@ export default function ProgressionComparaisons({ setSelectedZone, openProgressi
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      d={nbAmeliorations >= 2 ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : 
+                         nbAmeliorations >= 1 ? "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" : 
+                         "M20 12H4"}
                     />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm text-purple-800 font-semibold">
-                    Statut global
+                  <p className={`text-sm font-semibold ${
+                    nbAmeliorations >= 3 ? 'text-purple-800' : 
+                    nbAmeliorations >= 2 ? 'text-green-800' : 
+                    nbAmeliorations >= 1 ? 'text-yellow-800' : 'text-gray-800'
+                  }`}>
+                    {nbAmeliorations >= 3 ? '🚀 Progression exceptionnelle' : 
+                     nbAmeliorations >= 2 ? '📈 Bonne progression' : 
+                     nbAmeliorations >= 1 ? '⚡ Progression modérée' : '📊 Performance stable'}
                   </p>
-                  <p className="text-xs text-purple-600">
-                    Progression constante sur tous les indicateurs
+                  <p className={`text-xs ${
+                    nbAmeliorations >= 3 ? 'text-purple-600' : 
+                    nbAmeliorations >= 2 ? 'text-green-600' : 
+                    nbAmeliorations >= 1 ? 'text-yellow-600' : 'text-gray-600'
+                  }`}>
+                    {lastData ? 
+                      `${nbAmeliorations}/4 indicateurs en amélioration vs séance précédente` : 
+                      'Première séance enregistrée - pas de comparaison possible'}
                   </p>
                 </div>
               </div>

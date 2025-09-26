@@ -13,6 +13,7 @@ import {
   getDynamicZoneDefinitions,
   getDynamicEfficiencyDefinitions,
   getDynamicProgressDefinitions,
+  getDynamicRecoveryDefinitions,
 } from "./definitions";
 
 interface ExplanationModalProps {
@@ -28,10 +29,11 @@ const getDefinitionForZone = (selectedZone: string, currentData?: CardioData, pr
   const dynamicZones = currentData ? getDynamicZoneDefinitions(currentData) : zoneDefinitions;
   const dynamicEfficiency = currentData ? getDynamicEfficiencyDefinitions(currentData, previousData) : efficiencyDefinitions;
   const dynamicProgress = currentData && previousData ? getDynamicProgressDefinitions(currentData, previousData) : progressDefinitions;
+  const dynamicRecovery = currentData ? getDynamicRecoveryDefinitions(currentData) : recoveryDefinitions;
 
   const allDefinitions = {
     ...dynamicZones,
-    ...recoveryDefinitions,
+    ...dynamicRecovery,
     ...dynamicEfficiency,
     ...dynamicProgress,
     ...analysisDefinitions,

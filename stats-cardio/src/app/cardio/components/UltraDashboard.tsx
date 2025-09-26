@@ -89,8 +89,21 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
       if (saved) {
         const analyses = JSON.parse(saved);
         const currentIndex = analyses.findIndex((a: any) => a.id === data.id);
-        if (currentIndex > 0) {
-          return analyses.slice(0, currentIndex); // Toutes les données avant la session actuelle
+        
+        // Debug pour voir ce qui se passe
+        console.log("DEBUG getAllPreviousData:", {
+          totalAnalyses: analyses.length,
+          currentIndex,
+          currentId: data.id,
+          allIds: analyses.map((a: any) => a.id)
+        });
+        
+        if (currentIndex >= 0) {
+          // Si c'est la dernière séance (index 0 car triées par ordre décroissant)
+          // prendre toutes les autres séances
+          const previousData = analyses.slice(currentIndex + 1);
+          console.log("DEBUG previousData:", previousData.length, "séances trouvées");
+          return previousData;
         }
       }
     } catch (error) {
@@ -101,6 +114,10 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
 
   const previousData = getPreviousData();
   const allPreviousData = getAllPreviousData();
+  
+  // Filtrer les données précédentes par type d'activité pour les comparaisons
+  const currentType = data.type || 'Course';
+  const sameSportPreviousData = allPreviousData.filter(d => (d.type || 'Course') === currentType);
 
   // Calculs des trends
   const calculateTrend = (current: number, previous?: number) => {
@@ -328,7 +345,7 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
           {/* Option 2: Efficacité Énergétique */}
           <EfficaciteEnergetique
             data={data}
-            previousData={allPreviousData}
+            previousData={sameSportPreviousData}
             setSelectedZone={setSelectedZone}
             openEfficiency={openEfficiency}
             setOpenEfficiency={setOpenEfficiency}
@@ -339,6 +356,7 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Option 3: Récupération */}
           <MetriquesRecuperation
+            data={data}
             setSelectedZone={setSelectedZone}
             openRecovery={openRecovery}
             setOpenRecovery={setOpenRecovery}
@@ -346,6 +364,8 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
 
           {/* Option 4: Progression */}
           <ProgressionComparaisons
+            data={data}
+            previousData={sameSportPreviousData}
             setSelectedZone={setSelectedZone}
             openProgression={openProgression}
             setOpenProgression={setOpenProgression}
@@ -389,7 +409,7 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
         selectedZone={selectedZone}
         setSelectedZone={setSelectedZone}
         currentData={data}
-        previousData={allPreviousData}
+        previousData={sameSportPreviousData}
       />
     </div>
   );

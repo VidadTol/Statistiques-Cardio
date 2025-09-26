@@ -1,12 +1,33 @@
 import React from 'react';
+import { CardioData } from '../../../../types/data';
 
 interface Props {
+  data: CardioData;
   setSelectedZone: (zone: string) => void;
   openRecovery: boolean;
   setOpenRecovery: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default function MetriquesRecuperation({ setSelectedZone, openRecovery, setOpenRecovery }: Props) {
+export default function MetriquesRecuperation({ data, setSelectedZone, openRecovery, setOpenRecovery }: Props) {
+  // Calculs de récupération basés sur vos vraies données TCX
+  const intensiteGlobale = data.intensite || 3;
+  const dureeSeance = data.dureeExercice || 0;
+  const caloriesDepensees = data.calories || 0;
+  
+  // Calcul du sommeil requis basé sur l'intensité réelle
+  const sommeilRequis = intensiteGlobale >= 4 ? "8-9h" : intensiteGlobale >= 3 ? "7-8h" : "7h";
+  
+  // Calcul de l'hydratation basée sur la durée et les calories
+  const hydratationBase = dureeSeance > 60 ? "2L" : "1.5L";
+  const hydratationTemps = dureeSeance > 90 ? "3h" : "2h";
+  
+  // Planning de récupération basé sur l'intensité
+  const periodeRecup = intensiteGlobale >= 4 ? "72h" : intensiteGlobale >= 3 ? "48-72h" : "24-48h";
+  
+  // Zone de récupération active basée sur la FC moyenne
+  const fcRecupMin = Math.max(100, Math.round((data.frequenceCardio || 140) * 0.7));
+  const fcRecupMax = Math.max(120, Math.round((data.frequenceCardio || 140) * 0.8));
+
   return (
     <section>
       {/* En-tête cliquable */}
@@ -66,7 +87,7 @@ export default function MetriquesRecuperation({ setSelectedZone, openRecovery, s
               <div className="flex items-center gap-2">
                 <div className="px-3 py-1 bg-blue-100 rounded-full">
                   <span className="font-semibold text-blue-700">
-                    8-9h requises
+                    {sommeilRequis} requises
                   </span>
                 </div>
               </div>
@@ -101,7 +122,7 @@ export default function MetriquesRecuperation({ setSelectedZone, openRecovery, s
               <div className="flex items-center gap-2">
                 <div className="px-3 py-1 bg-cyan-100 rounded-full">
                   <span className="font-semibold text-cyan-700">
-                    1.5L dans 2h
+                    {hydratationBase} dans {hydratationTemps}
                   </span>
                 </div>
               </div>
@@ -136,7 +157,7 @@ export default function MetriquesRecuperation({ setSelectedZone, openRecovery, s
               <div className="flex items-center gap-2">
                 <div className="px-3 py-1 bg-purple-100 rounded-full">
                   <span className="font-semibold text-purple-700">
-                    48-72h
+                    {periodeRecup}
                   </span>
                 </div>
               </div>
@@ -171,17 +192,27 @@ export default function MetriquesRecuperation({ setSelectedZone, openRecovery, s
               <div className="flex items-center gap-2">
                 <div className="px-3 py-1 bg-green-100 rounded-full">
                   <span className="font-semibold text-green-700">
-                    100-120 bpm
+                    {fcRecupMin}-{fcRecupMax} bpm
                   </span>
                 </div>
               </div>
             </div>
-            <div className="bg-blue-50 rounded-lg p-3 mt-2">
-              <p className="text-sm text-blue-700 font-medium">
-                🛡️ Statut global
+            <div className={`rounded-lg p-3 mt-2 ${
+              intensiteGlobale >= 4 ? 'bg-red-50' : 
+              intensiteGlobale >= 3 ? 'bg-orange-50' : 'bg-blue-50'
+            }`}>
+              <p className={`text-sm font-medium ${
+                intensiteGlobale >= 4 ? 'text-red-700' : 
+                intensiteGlobale >= 3 ? 'text-orange-700' : 'text-blue-700'
+              }`}>
+                {intensiteGlobale >= 4 ? '🔥 Récupération intensive nécessaire' : 
+                 intensiteGlobale >= 3 ? '⚡ Récupération modérée recommandée' : '🛡️ Récupération légère suffisante'}
               </p>
-              <p className="text-xs text-blue-600">
-                Récupération intensive recommandée
+              <p className={`text-xs ${
+                intensiteGlobale >= 4 ? 'text-red-600' : 
+                intensiteGlobale >= 3 ? 'text-orange-600' : 'text-blue-600'
+              }`}>
+                Séance de {dureeSeance}min • {caloriesDepensees} kcal • Intensité {intensiteGlobale}/5
               </p>
             </div>
           </div>

@@ -222,6 +222,52 @@ export function getDynamicEfficiencyDefinitions(currentData?: CardioData, previo
 // Export pour compatibilité avec l'ancien code
 export const efficiencyDefinitions = staticEfficiencyDefinitions;
 
+// Fonction pour générer des définitions de récupération dynamiques
+export function getDynamicRecoveryDefinitions(currentData?: CardioData): typeof recoveryDefinitions {
+  if (!currentData) return recoveryDefinitions;
+
+  const intensiteGlobale = currentData.intensite || 3;
+  const dureeSeance = currentData.dureeExercice || 0;
+  const caloriesDepensees = currentData.calories || 0;
+  
+  // Calcul du sommeil requis basé sur l'intensité réelle
+  const sommeilRequis = intensiteGlobale >= 4 ? "8-9h" : intensiteGlobale >= 3 ? "7-8h" : "7h";
+  const sommeilDescription = intensiteGlobale >= 4 ? "intensive" : intensiteGlobale >= 3 ? "modérée" : "légère";
+  
+  // Zone de récupération active basée sur la FC moyenne
+  const fcRecupMin = Math.max(100, Math.round((currentData.frequenceCardio || 140) * 0.7));
+  const fcRecupMax = Math.max(120, Math.round((currentData.frequenceCardio || 140) * 0.8));
+
+  return {
+    "Qualité du sommeil": {
+      title: "🛌 Qualité du sommeil recommandée",
+      description: `Après votre séance ${sommeilDescription} de ${dureeSeance}min (${caloriesDepensees} kcal), votre corps a besoin de ${sommeilRequis} de sommeil de qualité pour optimiser la récupération musculaire et neurologique.`,
+      benefits: "Favorise la synthèse protéique et la régénération cellulaire",
+    },
+    Hydratation: {
+      title: "💧 Hydratation post-effort",
+      description: dureeSeance > 60 
+        ? `Séance longue détectée (${dureeSeance}min). Buvez 2L d'eau dans les 3h suivant l'effort, puis 150% du poids perdu en sueur. Ajoutez des électrolytes pour cette durée d'effort.`
+        : `Pour votre séance de ${dureeSeance}min, buvez 1.5L d'eau dans les 2h suivant l'effort, puis 150% du poids perdu en sueur.`,
+      benefits: "Restaure l équilibre hydrique et facilite l élimination des toxines",
+    },
+    "Planning de récupération": {
+      title: "📅 Planning de récupération optimisé",
+      description: intensiteGlobale >= 4
+        ? `Séance très intensive détectée (${intensiteGlobale}/5). Les 72h suivantes : J+1 repos complet, J+2 étirements légers, J+3 récupération active. Évitez l'intensité avant 72h.`
+        : intensiteGlobale >= 3
+        ? `Séance modérément intensive (${intensiteGlobale}/5). Les 48-72h suivantes : J+1 étirements légers et marche, J+2 récupération active (natation/vélo facile). Évitez l'intensité avant 48-72h.`
+        : `Séance légère (${intensiteGlobale}/5). Les 24-48h suivantes : récupération active recommandée, retour à l'intensité possible après 24-48h.`,
+      benefits: "Accélère l élimination des déchets métaboliques",
+    },
+    "Zone de récupération": {
+      title: "🎯 Zone de récupération active",
+      description: `Basé sur votre FC moyenne de ${currentData.frequenceCardio} bpm, maintenez une FC entre ${fcRecupMin}-${fcRecupMax} bpm lors d'activités légères les prochains jours. Cette zone favorise la circulation sans stress supplémentaire.`,
+      benefits: "Améliore la circulation et accélère la récupération",
+    },
+  };
+}
+
 // Définitions des métriques de progression (statiques par défaut)
 const staticProgressDefinitions = {
   "Évolution distance": {
@@ -312,7 +358,7 @@ export function getAllDynamicDefinitions(currentData?: CardioData, previousData?
     zones: getDynamicZoneDefinitions(currentData),
     efficiency: getDynamicEfficiencyDefinitions(currentData, previousData),
     progress: getDynamicProgressDefinitions(currentData, previousData),
-    recovery: recoveryDefinitions, // Reste statique pour l'instant
+    recovery: getDynamicRecoveryDefinitions(currentData), // Maintenant dynamique !
     analysis: analysisDefinitions, // Reste statique pour l'instant
     objectives: objectivesDefinitions, // Reste statique pour l'instant
   };
