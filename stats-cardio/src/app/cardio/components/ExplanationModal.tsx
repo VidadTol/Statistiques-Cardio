@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import { CardioData } from "../../../types/data";
 import {
   zoneDefinitions,
   recoveryDefinitions,
@@ -9,20 +10,30 @@ import {
   progressDefinitions,
   analysisDefinitions,
   objectivesDefinitions,
+  getDynamicZoneDefinitions,
+  getDynamicEfficiencyDefinitions,
+  getDynamicProgressDefinitions,
 } from "./definitions";
 
 interface ExplanationModalProps {
   selectedZone: string | null;
   setSelectedZone: (zone: string | null) => void;
+  currentData?: CardioData;
+  previousData?: CardioData[];
 }
 
-// Helper pour trouver la définition correspondante
-const getDefinitionForZone = (selectedZone: string) => {
+// Helper pour trouver la définition correspondante (dynamique si données disponibles)
+const getDefinitionForZone = (selectedZone: string, currentData?: CardioData, previousData?: CardioData[]) => {
+  // Obtenir les définitions dynamiques si les données sont disponibles
+  const dynamicZones = currentData ? getDynamicZoneDefinitions(currentData) : zoneDefinitions;
+  const dynamicEfficiency = currentData ? getDynamicEfficiencyDefinitions(currentData, previousData) : efficiencyDefinitions;
+  const dynamicProgress = currentData && previousData ? getDynamicProgressDefinitions(currentData, previousData) : progressDefinitions;
+
   const allDefinitions = {
-    ...zoneDefinitions,
+    ...dynamicZones,
     ...recoveryDefinitions,
-    ...efficiencyDefinitions,
-    ...progressDefinitions,
+    ...dynamicEfficiency,
+    ...dynamicProgress,
     ...analysisDefinitions,
     ...objectivesDefinitions,
   };
@@ -33,10 +44,12 @@ const getDefinitionForZone = (selectedZone: string) => {
 export default function ExplanationModal({
   selectedZone,
   setSelectedZone,
+  currentData,
+  previousData,
 }: ExplanationModalProps) {
   if (!selectedZone) return null;
 
-  const definition = getDefinitionForZone(selectedZone);
+  const definition = getDefinitionForZone(selectedZone, currentData, previousData);
 
   if (!definition) {
     console.warn(`Aucune définition trouvée pour: ${selectedZone}`);

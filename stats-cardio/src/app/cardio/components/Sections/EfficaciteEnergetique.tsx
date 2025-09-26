@@ -1,14 +1,34 @@
 import React from 'react';
+import { CardioData } from '../../../../types/data';
+import { getDynamicEfficiencyDefinitions } from '../definitions';
 
 interface Props {
-  data: any;
-  previousData: any;
+  data: CardioData;
+  previousData: CardioData[];
   setSelectedZone: (zone: string) => void;
   openEfficiency: boolean;
   setOpenEfficiency: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export default function EfficaciteEnergetique({ data, previousData, setSelectedZone, openEfficiency, setOpenEfficiency }: Props) {
+  // Calculs d'efficacité dynamiques basés sur vos vraies données TCX
+  const caloriesParKm = data.distance > 0 ? Math.round(data.calories / data.distance) : 0;
+  const caloriesParMinute = data.dureeExercice > 0 ? Math.round(data.calories / data.dureeExercice) : 0;
+  
+  // Calcul de l'efficacité cardiaque basée sur la répartition des zones
+  const highIntensityZones = data.heartRateZones?.filter(z => z.name.includes('VO2') || z.name.includes('Anaérobie')) || [];
+  const highIntensityTime = highIntensityZones.reduce((sum, z) => sum + (z.percentage || 0), 0);
+  const efficaciteCardiaque = Math.min(100, Math.max(0, 100 - highIntensityTime + (data.vo2Max || 0) / 2));
+
+  // Calcul du seuil d'efficacité optimal basé sur votre FC moyenne
+  const seuilMin = data.frequenceCardio > 0 ? data.frequenceCardio - 10 : 155;
+  const seuilMax = data.frequenceCardio > 0 ? data.frequenceCardio + 10 : 165;
+
+  // Calcul de l'amélioration par rapport à la dernière séance
+  const lastData = previousData && previousData.length > 0 ? previousData[previousData.length - 1] : null;
+  const lastCalPerKm = lastData && lastData.distance > 0 ? lastData.calories / lastData.distance : 0;
+  const improvement = caloriesParKm > 0 && lastCalPerKm > 0 ? Math.round(((lastCalPerKm - caloriesParKm) / lastCalPerKm) * 100) : 0;
+
   return (
     <section>
       {/* En-tête cliquable */}
@@ -68,7 +88,7 @@ export default function EfficaciteEnergetique({ data, previousData, setSelectedZ
                 <div className="flex items-center gap-2">
                   <div className="px-3 py-1 bg-red-100 rounded-full">
                     <span className="font-semibold text-red-700">
-                      {Math.round(data.calories / data.distance)} cal
+                      {caloriesParKm} cal
                     </span>
                   </div>
                 </div>
@@ -103,7 +123,7 @@ export default function EfficaciteEnergetique({ data, previousData, setSelectedZ
                 <div className="flex items-center gap-2">
                   <div className="px-3 py-1 bg-blue-100 rounded-full">
                     <span className="font-semibold text-blue-700">
-                      {Math.round(data.calories / data.dureeExercice)} cal/min
+                      {caloriesParMinute} cal/min
                     </span>
                   </div>
                 </div>
@@ -137,7 +157,7 @@ export default function EfficaciteEnergetique({ data, previousData, setSelectedZ
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="px-3 py-1 bg-green-100 rounded-full">
-                    <span className="font-semibold text-green-700">85%</span>
+                    <span className="font-semibold text-green-700">{Math.round(efficaciteCardiaque)}%</span>
                   </div>
                 </div>
               </div>
@@ -171,7 +191,7 @@ export default function EfficaciteEnergetique({ data, previousData, setSelectedZ
                 <div className="flex items-center gap-2">
                   <div className="px-3 py-1 bg-purple-100 rounded-full">
                     <span className="font-semibold text-purple-700">
-                      155-165 bpm
+                      {seuilMin}-{seuilMax} bpm
                     </span>
                   </div>
                 </div>
@@ -206,31 +226,29 @@ export default function EfficaciteEnergetique({ data, previousData, setSelectedZ
                 <div className="flex items-center gap-2">
                   <div className="px-3 py-1 bg-emerald-100 rounded-full">
                     <span className="font-bold text-emerald-700">
-                      {previousData
-                        ? `${
-                            previousData.calories > 0
-                              ? Math.round(
-                                  ((data.calories / data.distance -
-                                    previousData.calories /
-                                      previousData.distance) /
-                                    (previousData.calories /
-                                      previousData.distance)) *
-                                    100
-                                )
-                              : "+8"
-                          }%`
-                        : "+8%"}
+                      {improvement > 0 ? '+' : ''}{improvement}%
                     </span>
                   </div>
                   <span className="text-gray-500 text-sm">efficacité</span>
                 </div>
               </div>
-              <div className="bg-green-50 rounded-lg p-3 mt-2">
-                <p className="text-sm text-green-700 font-medium">
-                  ✅ Statut global
+              <div className={`rounded-lg p-3 mt-2 ${
+                caloriesParKm < 250 ? 'bg-green-50' : 
+                caloriesParKm < 350 ? 'bg-yellow-50' : 'bg-orange-50'
+              }`}>
+                <p className={`text-sm font-medium ${
+                  caloriesParKm < 250 ? 'text-green-700' : 
+                  caloriesParKm < 350 ? 'text-yellow-700' : 'text-orange-700'
+                }`}>
+                  {caloriesParKm < 250 ? '🔥 Excellent rendement énergétique' : 
+                   caloriesParKm < 350 ? '⚡ Bon rendement énergétique' : '📈 Potentiel d\'amélioration'}
                 </p>
-                <p className="text-xs text-green-600">
-                  Efficacité énergétique en progression
+                <p className={`text-xs ${
+                  caloriesParKm < 250 ? 'text-green-600' : 
+                  caloriesParKm < 350 ? 'text-yellow-600' : 'text-orange-600'
+                }`}>
+                  {caloriesParKm} cal/km • Efficacité cardiaque: {Math.round(efficaciteCardiaque)}%
+                  {data.vo2Max && ` • VO2 Max: ${data.vo2Max} ml/kg/min`}
                 </p>
               </div>
             </div>

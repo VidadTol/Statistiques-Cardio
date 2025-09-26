@@ -82,7 +82,25 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
     return null;
   };
 
+  // Récupération de toutes les données précédentes pour les définitions dynamiques
+  const getAllPreviousData = (): CardioData[] => {
+    try {
+      const saved = localStorage.getItem("cardioAnalyses");
+      if (saved) {
+        const analyses = JSON.parse(saved);
+        const currentIndex = analyses.findIndex((a: any) => a.id === data.id);
+        if (currentIndex > 0) {
+          return analyses.slice(0, currentIndex); // Toutes les données avant la session actuelle
+        }
+      }
+    } catch (error) {
+      console.error("Erreur récupération toutes données précédentes:", error);
+    }
+    return [];
+  };
+
   const previousData = getPreviousData();
+  const allPreviousData = getAllPreviousData();
 
   // Calculs des trends
   const calculateTrend = (current: number, previous?: number) => {
@@ -304,12 +322,13 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
             setSelectedZone={setSelectedZone}
             openZones={openZones}
             setOpenZones={setOpenZones}
+            currentData={data}
           />
 
           {/* Option 2: Efficacité Énergétique */}
           <EfficaciteEnergetique
             data={data}
-            previousData={previousData}
+            previousData={allPreviousData}
             setSelectedZone={setSelectedZone}
             openEfficiency={openEfficiency}
             setOpenEfficiency={setOpenEfficiency}
@@ -369,6 +388,8 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
       <ExplanationModal
         selectedZone={selectedZone}
         setSelectedZone={setSelectedZone}
+        currentData={data}
+        previousData={allPreviousData}
       />
     </div>
   );

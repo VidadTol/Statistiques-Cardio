@@ -1,4 +1,6 @@
 import React from 'react';
+import { CardioData } from '../../../../types/data';
+import { getDynamicZoneDefinitions } from '../definitions';
 
 interface HeartRateZones {
   [key: string]: {
@@ -12,6 +14,7 @@ interface Props {
   setSelectedZone: (zone: string) => void;
   openZones: boolean;
   setOpenZones: (fn: (o: boolean) => boolean) => void;
+  currentData?: CardioData; // Ajout pour les définitions dynamiques
 }
 
 export default function RepartitionZonesCardiaques({
@@ -19,7 +22,11 @@ export default function RepartitionZonesCardiaques({
   setSelectedZone,
   openZones,
   setOpenZones,
+  currentData,
 }: Props) {
+  // Obtenir les définitions dynamiques basées sur les vraies données
+  const dynamicDefinitions = getDynamicZoneDefinitions(currentData);
+  
   // Trouver la zone dominante
   const zones = Object.entries(heartRateZones) as [string, {percentage: number, duration: number}][];
   const dominantZone = zones.reduce((max, current) => current[1].percentage > max[1].percentage ? current : max);
@@ -72,6 +79,17 @@ export default function RepartitionZonesCardiaques({
             <p className="text-xs text-gray-600 mb-3">
               <span className="font-medium">Zone dominante:</span> {dominantZone[0]} ({dominantPercentage}%) pendant {Math.floor(dominantDuration / 60)}:{String(dominantDuration % 60).padStart(2, '0')}
             </p>
+            
+            {/* Affichage des bénéfices dynamiques de la zone dominante */}
+            {currentData && dynamicDefinitions[dominantZone[0] as keyof typeof dynamicDefinitions] && (
+              <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm font-medium text-blue-800">💡 Bénéfice principal</p>
+                <p className="text-xs text-blue-700">
+                  {dynamicDefinitions[dominantZone[0] as keyof typeof dynamicDefinitions]?.benefits}
+                </p>
+              </div>
+            )}
+            
             <div className={`rounded-lg p-3 ${
               dominantPercentage > 40 ? 'bg-orange-100' : 
               dominantPercentage > 25 ? 'bg-green-100' : 'bg-blue-100'
@@ -86,6 +104,10 @@ export default function RepartitionZonesCardiaques({
               }`}>
                 {dominantPercentage > 40 ? 'Séance intensive détectée' : 
                  dominantPercentage > 25 ? 'Séance d\'endurance équilibrée' : 'Séance de récupération active'}
+                {/* Ajout d'informations dynamiques si disponibles */}
+                {currentData && currentData.vo2Max && (
+                  ` • VO2 Max estimé: ${currentData.vo2Max} ml/kg/min`
+                )}
               </p>
             </div>
           </div>
