@@ -377,7 +377,7 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
           {/* Section 5: Analyse de Progression */}
           <AnalyseProgression
             data={data}
-            previousData={previousData}
+            previousData={sameSportPreviousData}
             setSelectedZone={setSelectedZone}
             openAnalyse={openAnalyse}
             setOpenAnalyse={setOpenAnalyse}
