@@ -385,6 +385,8 @@ export default function UltraDashboard({ data }: { data: CardioData }) {
 
           {/* Section 6: Objectifs & Challenges */}
           <ObjectifsChallenges
+            data={data}
+            previousData={sameSportPreviousData}
             setSelectedZone={setSelectedZone}
             openObjectifs={openObjectifs}
             setOpenObjectifs={setOpenObjectifs}

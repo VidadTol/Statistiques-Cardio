@@ -396,3 +396,65 @@ export const objectivesDefinitions = {
     benefits: "Récompense la discipline et encourage la continuité",
   },
 };
+
+// Fonction pour obtenir des définitions dynamiques pour les objectifs et challenges
+export function getDynamicObjectifsDefinitions(
+  currentData: CardioData, 
+  previousData: CardioData[], 
+  monthlyTarget: number
+): { [key: string]: { title: string; description: string; benefits: string } } {
+  
+  const allData = [currentData, ...previousData];
+  const totalDistance = allData.reduce((sum, session) => sum + (session.distance || 0), 0);
+  const progressPercentage = Math.min((totalDistance / monthlyTarget) * 100, 100);
+  const remaining = monthlyTarget - totalDistance;
+  
+  // Challenge vitesse - amélioration de la vitesse moyenne
+  const recentSessions = allData.slice(0, 3);
+  const speedImprovement = recentSessions.length >= 2 ? 
+    recentSessions.filter((session, index) => {
+      if (index === recentSessions.length - 1) return false;
+      const previousSession = recentSessions[index + 1];
+      return (session.vitesseMoyenne || 0) > (previousSession.vitesseMoyenne || 0);
+    }).length : 0;
+  
+  // Badge régularité - séances dans les 7 derniers jours
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const recentSessions7Days = allData.filter(session => {
+    const [day, month, year] = session.date.split('/').map(Number);
+    const sessionDate = new Date(year, month - 1, day);
+    return sessionDate >= weekAgo;
+  });
+  const regularityBadge = recentSessions7Days.length >= 2;
+  
+  return {
+    "Objectif mensuel": {
+      title: `🎯 Objectif Distance Mensuel - ${totalDistance.toFixed(1)}/${monthlyTarget}km`,
+      description: remaining > 0 
+        ? `Vous avez parcouru ${totalDistance.toFixed(1)}km sur votre objectif de ${monthlyTarget}km (${Math.round(progressPercentage)}%). Plus que ${remaining.toFixed(1)}km à parcourir ! Basé sur vos ${allData.length} séances de ${currentData.type || 'cardio'}.`
+        : `🎉 Objectif atteint ! Vous avez parcouru ${totalDistance.toFixed(1)}km, dépassant votre objectif de ${monthlyTarget}km de ${(totalDistance - monthlyTarget).toFixed(1)}km. Excellent travail sur ${allData.length} séances !`,
+      benefits: "Maintient la motivation et structure votre progression selon vos objectifs personnels",
+    },
+    "Challenge vitesse": {
+      title: speedImprovement >= 2 
+        ? "⚡ Challenge Vitesse - 🏆 Débloqué !" 
+        : `⚡ Challenge Vitesse - ${speedImprovement}/2`,
+      description: speedImprovement >= 2
+        ? `Excellent ! Vous avez amélioré votre vitesse sur ${speedImprovement} séances consécutives. Vitesse actuelle: ${currentData.vitesseMoyenne?.toFixed(1)}km/h. Challenge réussi !`
+        : recentSessions.length < 2
+        ? `Challenge en cours : améliorez votre vitesse sur 2 séances consécutives. Vitesse actuelle: ${currentData.vitesseMoyenne?.toFixed(1)}km/h. Continuez pour débloquer le badge !`
+        : `Défi : ${speedImprovement} amélioration(s) sur 2 nécessaires. Vitesse actuelle: ${currentData.vitesseMoyenne?.toFixed(1)}km/h. Prochaine séance cruciale !`,
+      benefits: "Développe la vitesse et la constance dans l'effort",
+    },
+    "Badge régularité": {
+      title: regularityBadge 
+        ? "⭐ Badge Régularité - Débloqué !" 
+        : `📅 Badge Régularité - ${recentSessions7Days.length}/2`,
+      description: regularityBadge
+        ? `Badge débloqué ! Vous avez ${recentSessions7Days.length} séances dans les 7 derniers jours. Excellent rythme d'entraînement avec un total de ${allData.length} séances !`
+        : `Objectif : 2 séances par semaine. Actuellement ${recentSessions7Days.length} séance(s) cette semaine sur ${allData.length} au total. Continuez pour maintenir la régularité !`,
+      benefits: "Récompense la discipline et encourage la continuité",
+    },
+  };
+}

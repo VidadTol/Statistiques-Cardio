@@ -1,6 +1,9 @@
 import React from 'react';
+import { CardioData } from '../../../../types/data';
 
 interface Props {
+  data: CardioData;
+  previousData: CardioData[];
   setSelectedZone: (zone: string) => void;
   openObjectifs: boolean;
   setOpenObjectifs: React.Dispatch<React.SetStateAction<boolean>>;
@@ -11,6 +14,8 @@ interface Props {
 }
 
 export default function ObjectifsChallenges({ 
+  data,
+  previousData,
   setSelectedZone, 
   openObjectifs, 
   setOpenObjectifs, 
@@ -19,6 +24,32 @@ export default function ObjectifsChallenges({
   setIsEditingTarget, 
   handleTargetChange 
 }: Props) {
+  
+  // Calcul des métriques basées sur les données réelles
+  const allData = [data, ...previousData];
+  const totalDistance = allData.reduce((sum, session) => sum + (session.distance || 0), 0);
+  const progressPercentage = Math.min((totalDistance / monthlyTarget) * 100, 100);
+  
+  // Challenge vitesse - amélioration de la vitesse moyenne
+  const recentSessions = allData.slice(0, 3); // 3 dernières séances
+  const speedImprovement = recentSessions.length >= 2 ? 
+    recentSessions.filter((session, index) => {
+      if (index === recentSessions.length - 1) return false; // Exclure la plus ancienne
+      const previousSession = recentSessions[index + 1];
+      return (session.vitesseMoyenne || 0) > (previousSession.vitesseMoyenne || 0);
+    }).length : 0;
+  
+  // Badge régularité - séances dans les 7 derniers jours
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const recentSessions7Days = allData.filter(session => {
+    // Convertir la date format DD/MM/YYYY en objet Date
+    const [day, month, year] = session.date.split('/').map(Number);
+    const sessionDate = new Date(year, month - 1, day); // month - 1 car les mois sont indexés à partir de 0
+    return sessionDate >= weekAgo;
+  });
+  
+  const regularityBadge = recentSessions7Days.length >= 2;
   return (
     <div>
       <div className="flex items-center gap-3 cursor-pointer mb-6" onClick={() => setOpenObjectifs(o => !o)}>
@@ -76,105 +107,56 @@ export default function ObjectifsChallenges({
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
-                  {(() => {
-                    // Calculer le total des distances depuis localStorage
-                    try {
-                      const saved = localStorage.getItem("cardioAnalyses");
-                      let totalDistance = 0;
-                      const targetDistance = monthlyTarget; // Objectif personnalisable
-
-                      if (saved) {
-                        const analyses = JSON.parse(saved);
-
-                        if (analyses && analyses.length > 0) {
-                          totalDistance = analyses.reduce(
-                            (sum: number, analysis: any) => {
-                              return sum + (analysis.distance || 0);
-                            },
-                            0
-                          );
+                  <div className="w-20 bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full"
+                      style={{ width: `${progressPercentage}%` }}
+                    ></div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-2">
+                    <span className="text-gray-500 text-sm">
+                      {totalDistance > 0
+                        ? `${totalDistance.toFixed(1)}/`
+                        : `Première séance - Objectif: `}
+                    </span>
+                    {isEditingTarget ? (
+                      <input
+                        type="number"
+                        value={monthlyTarget}
+                        onChange={(e) =>
+                          handleTargetChange(
+                            parseInt(e.target.value) || 30
+                          )
                         }
-                      }
-
-                      const progressPercentage = Math.min(
-                        (totalDistance / targetDistance) * 100,
-                        100
-                      );
-
-                      return (
-                        <>
-                          <div className="w-20 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-green-500 h-2 rounded-full"
-                              style={{ width: `${progressPercentage}%` }}
-                            ></div>
-                          </div>
-                          <div className="flex items-center gap-2 ml-2">
-                            <span className="text-gray-500 text-sm">
-                              {totalDistance > 0
-                                ? `${totalDistance.toFixed(1)}/`
-                                : `Importez des TCX - Objectif: `}
-                            </span>
-                            {isEditingTarget ? (
-                              <input
-                                type="number"
-                                value={monthlyTarget}
-                                onChange={(e) =>
-                                  handleTargetChange(
-                                    parseInt(e.target.value) || 30
-                                  )
-                                }
-                                onBlur={() => setIsEditingTarget(false)}
-                                onKeyPress={(e) =>
-                                  e.key === "Enter" &&
-                                  setIsEditingTarget(false)
-                                }
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-12 px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                                min="1"
-                                max="1000"
-                                autoFocus
-                              />
-                            ) : (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation(); // Empêcher l'ouverture du modal
-                                  setIsEditingTarget(true);
-                                }}
-                                className="text-gray-700 hover:text-blue-600 text-sm font-medium underline decoration-dotted hover:decoration-solid transition-colors"
-                                title="Cliquez pour modifier votre objectif mensuel"
-                              >
-                                {monthlyTarget}km
-                              </button>
-                            )}
-                            {totalDistance > 0 && (
-                              <span className="text-gray-400 text-xs">
-                                (
-                                {Math.round(
-                                  (totalDistance / monthlyTarget) * 100
-                                )}
-                                %)
-                              </span>
-                            )}
-                          </div>
-                        </>
-                      );
-                    } catch (error) {
-                      return (
-                        <>
-                          <div className="w-20 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-green-500 h-2 rounded-full"
-                              style={{ width: "73%" }}
-                            ></div>
-                          </div>
-                          <span className="text-gray-500 text-sm ml-2">
-                            22/30km
-                          </span>
-                        </>
-                      );
-                    }
-                  })()}
+                        onBlur={() => setIsEditingTarget(false)}
+                        onKeyPress={(e) =>
+                          e.key === "Enter" &&
+                          setIsEditingTarget(false)
+                        }
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-12 px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                        min="1"
+                        max="1000"
+                        autoFocus
+                      />
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation(); // Empêcher l'ouverture du modal
+                          setIsEditingTarget(true);
+                        }}
+                        className="text-gray-700 hover:text-blue-600 text-sm font-medium underline decoration-dotted hover:decoration-solid transition-colors"
+                        title="Cliquez pour modifier votre objectif mensuel"
+                      >
+                        {monthlyTarget}km
+                      </button>
+                    )}
+                    {totalDistance > 0 && (
+                      <span className="text-gray-400 text-xs">
+                        ({Math.round(progressPercentage)}%)
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -207,9 +189,17 @@ export default function ObjectifsChallenges({
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="px-3 py-1 bg-yellow-100 rounded-full">
-                  <span className="text-yellow-700 font-bold text-sm">
-                    🏆 2/3
+                <div className={`px-3 py-1 rounded-full ${
+                  speedImprovement >= 2 ? 'bg-green-100' : 
+                  speedImprovement >= 1 ? 'bg-yellow-100' : 'bg-gray-100'
+                }`}>
+                  <span className={`font-bold text-sm ${
+                    speedImprovement >= 2 ? 'text-green-700' : 
+                    speedImprovement >= 1 ? 'text-yellow-700' : 'text-gray-700'
+                  }`}>
+                    {speedImprovement >= 2 ? '🏆 Débloqué' : 
+                     speedImprovement >= 1 ? `⚡ ${speedImprovement}/2` : 
+                     recentSessions.length < 2 ? '📊 En cours...' : '❌ 0/2'}
                   </span>
                 </div>
               </div>
@@ -243,9 +233,13 @@ export default function ObjectifsChallenges({
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="px-3 py-1 bg-amber-100 rounded-full">
-                  <span className="text-amber-700 font-bold text-sm">
-                    ⭐ Débloqué
+                <div className={`px-3 py-1 rounded-full ${
+                  regularityBadge ? 'bg-amber-100' : 'bg-gray-100'
+                }`}>
+                  <span className={`font-bold text-sm ${
+                    regularityBadge ? 'text-amber-700' : 'text-gray-700'
+                  }`}>
+                    {regularityBadge ? '⭐ Débloqué' : `📅 ${recentSessions7Days.length}/2`}
                   </span>
                 </div>
               </div>
@@ -274,40 +268,15 @@ export default function ObjectifsChallenges({
                   </p>
                   <p className="text-xs text-amber-600">
                     {(() => {
-                      try {
-                        const saved = localStorage.getItem("cardioAnalyses");
-                        let totalDistance = 0;
-
-                        if (saved) {
-                          const analyses = JSON.parse(saved);
-                          if (analyses && analyses.length > 0) {
-                            totalDistance = analyses.reduce(
-                              (sum: number, analysis: any) => {
-                                return sum + (analysis.distance || 0);
-                              },
-                              0
-                            );
-                          }
-                        }
-
-                        const remaining = monthlyTarget - totalDistance;
-
-                        if (totalDistance === 0) {
-                          return `Commencez votre aventure ! Objectif: ${monthlyTarget}km ce mois-ci 🚀`;
-                        } else if (remaining > 0) {
-                          return `Plus que ${remaining.toFixed(
-                            1
-                          )}km pour atteindre votre objectif !`;
-                        } else {
-                          const excess = totalDistance - monthlyTarget;
-                          return `🎉 Objectif atteint ! Vous avez dépassé de ${excess.toFixed(
-                            1
-                          )}km !`;
-                        }
-                      } catch (error) {
-                        return `Plus que ${(monthlyTarget - 22).toFixed(
-                          1
-                        )}km pour atteindre votre objectif !`;
+                      const remaining = monthlyTarget - totalDistance;
+                      
+                      if (allData.length === 1) {
+                        return `Première séance terminée ! Objectif: ${monthlyTarget}km ce mois-ci 🚀`;
+                      } else if (remaining > 0) {
+                        return `Plus que ${remaining.toFixed(1)}km pour atteindre votre objectif ! (${allData.length} séances)`;
+                      } else {
+                        const excess = totalDistance - monthlyTarget;
+                        return `🎉 Objectif atteint ! Vous avez dépassé de ${excess.toFixed(1)}km ! (${allData.length} séances)`;
                       }
                     })()}
                   </p>
