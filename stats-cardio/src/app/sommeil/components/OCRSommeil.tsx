@@ -80,10 +80,15 @@ export default function OCRSommeil({ images, onAnalysesExtracted }: OCRProps) {
       else if (text.match(/normal/i)) qualite = "Normale";
       else if (text.match(/mauvais/i)) qualite = "Mauvaise";
 
-      const profondMatch = text.match(/profond.*?(\d{1,2}[h:]?\d{2})/i);
+      const profondMatch = text.match(/(?:profond|deep).*?(\d{1,2}[h:]?\d{2})/i) ||
+                           text.match(/(\d{1,2}[h:]?\d{2}).*?(?:profond|deep)/i) ||
+                           text.match(/profond.*?(\d{1,3})%/i);
       const profond = profondMatch ? profondMatch[1] : undefined;
 
-      const remMatch = text.match(/rem.*?(\d{1,2}[h:]?\d{2})/i);
+      const remMatch = text.match(/(?:rem|r\.e\.m|paradoxal).*?(\d{1,2}[h:]?\d{2})/i) ||
+                       text.match(/(\d{1,2}[h:]?\d{2}).*?(?:rem|r\.e\.m|paradoxal)/i) ||
+                       text.match(/(?:rem|r\.e\.m|paradoxal).*?(\d{1,3})%/i) ||
+                       text.match(/(?:rem|r\.e\.m|paradoxal).*?(\d{1,2})min/i);
       const rem = remMatch ? remMatch[1] : undefined;
 
       const analyse: SommeilData = {
