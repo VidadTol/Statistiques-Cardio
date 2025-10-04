@@ -1,13 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { SommeilData } from "./OCRSommeil";
+import AnalyseDetaillee from "./AnalyseDetaillee";
 
 interface VueEnsembleProps {
   analyses: SommeilData[];
 }
 
 export default function VueEnsemble({ analyses }: VueEnsembleProps) {
+  const [selectedSeance, setSelectedSeance] = useState<SommeilData | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   // Calculer les statistiques basées sur les images analysées
   const seances = analyses.filter(a => a.badge === "⚽ Séance");
   
@@ -25,6 +29,16 @@ export default function VueEnsemble({ analyses }: VueEnsembleProps) {
       nuitsAvantCount += 1;
     }
   });
+
+  const handleOpenModal = (seance: SommeilData) => {
+    setSelectedSeance(seance);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedSeance(null);
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
@@ -74,7 +88,10 @@ export default function VueEnsemble({ analyses }: VueEnsembleProps) {
               </div>
 
               {/* Bouton détails */}
-              <button className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-2 px-3 rounded text-sm transition-all">
+              <button 
+                onClick={() => handleOpenModal(seance)}
+                className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-2 px-3 rounded text-sm transition-all"
+              >
                 Détails
               </button>
             </div>
@@ -106,6 +123,15 @@ export default function VueEnsemble({ analyses }: VueEnsembleProps) {
           </div>
         </div>
       </div>
+
+      {/* Modal d'analyse détaillée */}
+      {selectedSeance && (
+        <AnalyseDetaillee 
+          seance={selectedSeance}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 }
