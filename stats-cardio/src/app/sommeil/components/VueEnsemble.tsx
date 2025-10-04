@@ -27,60 +27,62 @@ export default function VueEnsemble({ analyses }: VueEnsembleProps) {
   });
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-      {/* Header violet */}
-      <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4">
+    <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
+      {/* Header simple */}
+      <div className="px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-            <span className="text-white text-lg">📊</span>
+          <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
           </div>
           <div>
-            <h2 className="text-white font-bold text-lg">Vue d'ensemble</h2>
-            <p className="text-white/80 text-sm">Vos données de sommeil avant/après football</p>
+            <h2 className="text-gray-800 font-bold text-lg">Vue d'ensemble</h2>
+            <p className="text-gray-600 text-sm">Classification automatique de votre sommeil</p>
           </div>
         </div>
       </div>
 
       {/* Contenu principal */}
       <div className="p-6">
-        {/* Cartes des séances */}
-        <div className="space-y-4 mb-6">
+        {/* Grille de petites cartes */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           {seances.map((seance, index) => (
-            <div key={index} className="bg-green-50 border border-green-200 rounded-xl p-6">
-              {/* Header de la séance */}
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-800">{seance.date}</h3>
-                <span className="bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-medium">
-                  Séance
+            <div key={index} className="bg-green-50 border border-green-200 rounded-lg p-4">
+              {/* Header avec titre et badge */}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-gray-800 text-sm">{seance.date}</h3>
+                <span className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-2 py-1 rounded text-xs font-medium">
+                  Football
                 </span>
               </div>
 
               {/* Données avant/après */}
-              <div className="space-y-3 mb-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 font-medium">Nuit AVANT:</span>
-                  <span className="font-bold text-gray-800">
-                    {seance.nuitAvant?.duree} ({seance.nuitAvant?.qualite})
-                  </span>
+              <div className="space-y-2 mb-3 text-sm">
+                <div>
+                  <span className="text-gray-600">Nuit AVANT:</span>
+                  <div className="font-bold text-gray-800">
+                    {seance.nuitAvant?.duree} ({seance.nuitAvant?.qualite?.toLowerCase()})
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 font-medium">Nuit APRÈS:</span>
-                  <span className="font-bold text-gray-800">
-                    {seance.nuitApres?.duree} ({seance.nuitApres?.qualite})
-                  </span>
+                <div>
+                  <span className="text-gray-600">Nuit APRÈS:</span>
+                  <div className="font-bold text-gray-800">
+                    {seance.nuitApres?.duree} ({seance.nuitApres?.qualite?.toLowerCase()})
+                  </div>
                 </div>
               </div>
 
               {/* Bouton détails */}
-              <button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
-                Détails complets
+              <button className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-2 px-3 rounded text-sm transition-all">
+                Détails
               </button>
             </div>
           ))}
 
           {/* Message si pas de séances */}
           {seances.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
+            <div className="col-span-full text-center py-12 text-gray-500">
               <div className="text-4xl mb-2">😴</div>
               <p className="font-medium">Aucune séance fusionnée disponible</p>
               <p className="text-sm">Uploadez 2 images pour créer une analyse</p>
