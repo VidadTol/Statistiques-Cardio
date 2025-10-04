@@ -6,11 +6,33 @@ import { createWorker } from "tesseract.js";
 // Interface pour les données extraites
 export interface SommeilData {
   date: string;
+  badge?: string;
   duree?: string;
   qualite?: string;
   regularite?: string;
   profond?: string;
   rem?: string;
+  // Pour les analyses fusionnées
+  nuitAvant?: {
+    duree?: string;
+    qualite?: string;
+  };
+  nuitApres?: {
+    duree?: string;
+    qualite?: string;
+  };
+  detailsAvant?: {
+    duree?: string;
+    regularite?: string;
+    profond?: string;
+    rem?: string;
+  };
+  detailsApres?: {
+    duree?: string;
+    regularite?: string;
+    profond?: string;
+    rem?: string;
+  };
 }
 
 interface OCRProps {
