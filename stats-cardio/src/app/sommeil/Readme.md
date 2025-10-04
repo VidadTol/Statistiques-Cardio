@@ -140,3 +140,6 @@ Si tout plante, suivre dans l'ordre :
 - ✅ VueEnsemble avec affichage format target
 - ✅ Interface moderne cohérente avec page cardio
 - ✅ Logique de fusion basée sur dates communes fonctionnelle 
+
+## Couleur des boutons 
+bg-gradient-to-r from-indigo-500 to-purple-600
