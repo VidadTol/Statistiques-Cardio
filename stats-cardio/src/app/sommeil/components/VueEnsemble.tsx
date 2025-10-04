@@ -8,10 +8,23 @@ interface VueEnsembleProps {
 }
 
 export default function VueEnsemble({ analyses }: VueEnsembleProps) {
-  // Calculer les statistiques
+  // Calculer les statistiques basées sur les images analysées
   const seances = analyses.filter(a => a.badge === "⚽ Séance");
-  const nuitsAvant = analyses.filter(a => !a.badge && !a.nuitApres);
-  const nuitsApres = analyses.filter(a => !a.badge && !a.nuitAvant);
+  
+  // Compter les nuits AVANT et APRÈS depuis les séances fusionnées + analyses individuelles
+  let nuitsAvantCount = 0;
+  let nuitsApresCount = 0;
+  
+  analyses.forEach(analyse => {
+    if (analyse.badge === "⚽ Séance") {
+      // Pour chaque séance fusionnée, on compte 1 nuit avant + 1 nuit après
+      nuitsAvantCount += 1;
+      nuitsApresCount += 1;
+    } else {
+      // Pour les analyses individuelles (si pas de fusion)
+      nuitsAvantCount += 1;
+    }
+  });
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
@@ -72,11 +85,11 @@ export default function VueEnsemble({ analyses }: VueEnsembleProps) {
       {/* Statistiques en bas */}
       <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
         <div className="text-center">
-          <div className="text-2xl font-bold text-gray-800">{nuitsAvant.length}</div>
+          <div className="text-2xl font-bold text-gray-800">{nuitsAvantCount}</div>
           <div className="text-sm text-gray-600">Nuits AVANT</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-gray-800">{nuitsApres.length}</div>
+          <div className="text-2xl font-bold text-gray-800">{nuitsApresCount}</div>
           <div className="text-sm text-gray-600">Nuits APRÈS</div>
         </div>
         <div className="text-center">
