@@ -66,7 +66,9 @@ export default function OCRSommeil({ images, onAnalysesExtracted }: OCRProps) {
       console.log("📝 Texte OCR:", text);
 
       // Extraction des données importantes
-      const dureeMatch = text.match(/(\d{1,2})[h:](\d{2})/);
+      const dureeMatch = text.match(/(?:durée|sommeil|dormi).*?(\d{1,2})[h:](\d{2})/i) || 
+                         text.match(/(\d{1,2})[h:](\d{2}).*?(?:sommeil|dormi)/i) ||
+                         text.match(/(\d{1,2})h(\d{2})/);
       const duree = dureeMatch ? `${dureeMatch[1]}h${dureeMatch[2]}` : undefined;
 
       const regulariteMatch = text.match(/(\d{1,3})%/);
