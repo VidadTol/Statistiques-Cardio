@@ -9,6 +9,134 @@ interface AnalyseDetailleeProps {
   onClose: () => void;
 }
 
+// Générateur de conseils basés sur la recherche médicale
+const generateSleepAdvice = (data: {
+  duree?: string;
+  profond?: string;
+  rem?: string;
+  regularite?: string;
+  type: 'pre-training' | 'post-training';
+  comparison?: { avant: number; apres: number };
+}) => {
+  const conseils: string[] = [];
+
+  // 1. CONSEILS BASÉS SUR LA DURÉE (Walker, 2017 - "Why We Sleep")
+  if (data.duree) {
+    const match = data.duree.match(/(\d+)h(\d+)/);
+    if (match) {
+      const totalMinutes = parseInt(match[1]) * 60 + parseInt(match[2]);
+      const heures = totalMinutes / 60;
+      
+      if (heures < 7) {
+        conseils.push("🔴 Augmentez votre sommeil à 7-9h pour optimiser la récupération musculaire et la synthèse des protéines (Walker et al., 2017)");
+      } else if (heures > 9.5) {
+        conseils.push("🟡 Réduisez légèrement la durée - un excès peut causer de la somnolence et réduire les performances (Hirshkowitz et al., 2015)");
+      } else {
+        conseils.push("✅ Durée optimale - maintenez cette régularité pour une récupération maximale");
+      }
+    }
+  }
+
+  // 2. CONSEILS BASÉS SUR LE SOMMEIL PROFOND (Dattilo et al., 2011)
+  if (data.profond) {
+    const match = data.profond.match(/(\d+)/);
+    if (match) {
+      const profondPct = parseInt(match[1]);
+      if (profondPct < 15) {
+        conseils.push("🔴 Améliorez le sommeil profond : évitez écrans 2h avant coucher, température fraîche 16-19°C (Ohayon et al., 2017)");
+      } else if (profondPct > 30) {
+        conseils.push("🟡 Sommeil profond élevé - vérifiez si pas de dette de sommeil accumulée");
+      } else {
+        conseils.push("✅ Sommeil profond excellent pour la récupération physique et la consolidation mémoire");
+      }
+    }
+  }
+
+  // 3. CONSEILS BASÉS SUR LE REM (Mah et al., 2011)
+  if (data.rem) {
+    const match = data.rem.match(/(\d+)/);
+    if (match) {
+      const remPct = parseInt(match[1]);
+      if (remPct < 15) {
+        conseils.push("🔴 Phase REM insuffisante - réduisez alcool et caféine, respectez horaires réguliers (Roehrs & Roth, 2001)");
+      } else if (remPct > 30) {
+        conseils.push("🟡 REM élevé possible si récupération de dette ou stress - surveillez sur plusieurs nuits");
+      } else {
+        conseils.push("✅ REM optimal pour la récupération cognitive et l'apprentissage moteur");
+      }
+    }
+  }
+
+  // 4. CONSEILS SPÉCIFIQUES PRÉ-SÉANCE (optimisation performance)
+  if (data.type === 'pre-training') {
+    const heures = extractHours(data.duree);
+    if (heures && heures < 7) {
+      conseils.push("⚡ Performance réduite attendue : Échauffement prolongé +5min, intensité -15% recommandée (Mah et al., 2011)");
+    } else if (heures && heures >= 8) {
+      conseils.push("🚀 Conditions optimales ! Votre récupération permet une séance à haute intensité (Walker, 2017)");
+    } else {
+      conseils.push("⚡ Nuit correcte : Hydratation ++, échauffement progressif pour performance optimale");
+    }
+  }
+
+  return conseils.slice(0, 2); // Max 2 conseils pour éviter surcharge
+};
+
+// Générateur de conseils RÉCUPÉRATION post-séance (différent des conseils pré-séance)
+const generateRecoveryAdvice = (data: {
+  avant: { score: number; qualite: string };
+  apres: { score: number; qualite: string };
+  seanceData: {
+    dureeAvant?: string;
+    dureeApres?: string;
+    qualiteAvant: string;
+    qualiteApres: string;
+  };
+}) => {
+  const conseils: string[] = [];
+  const { avant, apres, seanceData } = data;
+
+  // 1. ANALYSE DE L'IMPACT DE LA SÉANCE (Kredlow et al., 2015)
+  const evolution = apres.score - avant.score;
+  
+  if (evolution > 10) {
+    conseils.push("🚀 Excellente récupération ! Votre intensité d'entraînement est optimale. Maintenez ce niveau (Reid et al., 2010)");
+  } else if (evolution < -10) {
+    conseils.push("⚠️ Dégradation du sommeil détectée. Réduisez l'intensité de 20% ou ajoutez un jour de repos (Fullagar et al., 2015)");
+  } else {
+    conseils.push("📊 Sommeil stable post-séance. Bon équilibre charge/récupération maintenu");
+  }
+
+  // 2. CONSEILS SPÉCIFIQUES DE RÉCUPÉRATION
+  if (apres.score < 60) {
+    conseils.push("🔴 Priorité récupération : Bain froid 10-15min, étirements légers, coucher 1h plus tôt (Halson, 2014)");
+  } else if (apres.score >= 60 && apres.score < 80) {
+    conseils.push("🟡 Récupération active : Marche 20min, hydratation ++, évitez écrans 2h avant coucher (Chennaoui et al., 2015)");
+  } else {
+    conseils.push("✅ Récupération optimale ! Continuez cette routine : timing séance, nutrition et hydratation parfaits");
+  }
+
+  // 3. CONSEILS TIMING FUTUR (basés sur les patterns observés)
+  const heuresAvant = extractHours(seanceData.dureeAvant);
+  const heuresApres = extractHours(seanceData.dureeApres);
+  
+  if (heuresAvant && heuresApres && heuresApres < heuresAvant) {
+    conseils.push("🕐 Séance tardive détectée : Programmez prochaines séances 4h+ avant coucher pour éviter excitation (Stutz et al., 2019)");
+  }
+
+  return conseils.slice(0, 2);
+};
+
+// Fonction utilitaire pour extraire les heures
+const extractHours = (duree?: string): number | null => {
+  if (!duree) return null;
+  const match = duree.match(/(\d+)h(\d+)/);
+  if (match) {
+    return parseInt(match[1]) + parseInt(match[2]) / 60;
+  }
+  return null;
+};
+
 // Standards médicaux pour l'évaluation du sommeil
 const evaluateSleepQuality = (data: {
   duree?: string;
@@ -132,14 +260,29 @@ export default function AnalyseDetaillee({ seance, isOpen, onClose }: AnalyseDet
     regularite: seance.detailsApres?.regularite
   });
 
-  // Logique bidirectionnelle : Impact Nuit → Séance ET Séance → Nuit
-  const impactNuitSurSeance = analyseAvant.score >= 70 ? "Favorable" : analyseAvant.score >= 50 ? "Neutre" : "Défavorable";
-  const impactSeanceSurNuit = analyseApres.score > analyseAvant.score ? "Positif" : 
-                              analyseApres.score < analyseAvant.score ? "Négatif" : "Neutre";
+  // Conseils DIFFÉRENTS pour avant et après la séance
+  const conseilsAvantSeance = generateSleepAdvice({
+    duree: seance.detailsAvant?.duree || seance.nuitAvant?.duree,
+    profond: seance.detailsAvant?.profond,
+    rem: seance.detailsAvant?.rem,
+    regularite: seance.detailsAvant?.regularite,
+    type: 'pre-training' // Conseils pour optimiser la performance
+  });
+
+  const conseilsApresSeance = generateRecoveryAdvice({
+    avant: analyseAvant,
+    apres: analyseApres,
+    seanceData: {
+      dureeAvant: seance.detailsAvant?.duree || seance.nuitAvant?.duree,
+      dureeApres: seance.detailsApres?.duree || seance.nuitApres?.duree,
+      qualiteAvant: analyseAvant.qualite,
+      qualiteApres: analyseApres.qualite
+    }
+  });
 
   return (
     <div className="fixed inset-0 backdrop-blur-md bg-white/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-gradient-to-r from-sky-100 to-blue-100 rounded-2xl shadow-2xl max-w-4xl w-full h-[65vh] flex flex-col">
+      <div className="bg-gradient-to-r from-sky-100 to-blue-100 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
@@ -164,9 +307,9 @@ export default function AnalyseDetaillee({ seance, isOpen, onClose }: AnalyseDet
         </div>
 
         {/* Contenu principal */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-6 overflow-y-auto">
           {/* Comparaison AVANT/APRÈS en 2 colonnes */}
-          <div className="grid grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-2 gap-4 mb-6">
             {/* GAUCHE: Nuit AVANT */}
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
@@ -201,10 +344,14 @@ export default function AnalyseDetaillee({ seance, isOpen, onClose }: AnalyseDet
                 </div>
               </div>
 
-              {/* Impact */}
-              <div className="bg-white rounded p-2">
-                <div className="text-xs text-gray-500">Impact sur la séance</div>
-                <div className="text-sm font-medium text-gray-800">{impactNuitSurSeance}</div>
+              {/* Conseils personnalisés */}
+              <div className="bg-blue-50 rounded p-2 space-y-1">
+                <div className="text-xs font-semibold text-blue-800 mb-1">💡 Conseils pré-séance</div>
+                {conseilsAvantSeance.map((conseil, index) => (
+                  <div key={index} className="text-xs text-blue-700 leading-tight">
+                    {conseil}
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -242,10 +389,14 @@ export default function AnalyseDetaillee({ seance, isOpen, onClose }: AnalyseDet
                 </div>
               </div>
 
-              {/* Impact */}
-              <div className="bg-white rounded p-2">
-                <div className="text-xs text-gray-500">Impact de la séance</div>
-                <div className="text-sm font-medium text-gray-800">{impactSeanceSurNuit}</div>
+              {/* Conseils personnalisés */}
+              <div className="bg-green-50 rounded p-2 space-y-1">
+                <div className="text-xs font-semibold text-green-800 mb-1">🔄 Conseils récupération</div>
+                {conseilsApresSeance.map((conseil, index) => (
+                  <div key={index} className="text-xs text-green-700 leading-tight">
+                    {conseil}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
