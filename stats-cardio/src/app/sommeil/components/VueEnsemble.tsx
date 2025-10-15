@@ -12,8 +12,22 @@ export default function VueEnsemble({ analyses }: VueEnsembleProps) {
   const [selectedSeance, setSelectedSeance] = useState<SommeilData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Calculer les statistiques basées sur les images analysées
-  const seances = analyses.filter(a => a.badge === "⚽ Séance");
+  // Calculer les statistiques basées sur les images analysées et trier par date décroissante
+  const seances = analyses
+    .filter(a => a.badge === "⚽ Séance")
+    .sort((a, b) => {
+      // Convertir les dates DD/MM/YY en format comparable
+      const parseDate = (dateStr: string) => {
+        const [day, month, year] = dateStr.split('/').map(Number);
+        return new Date(2000 + year, month - 1, day);
+      };
+      
+      const dateA = parseDate(a.date);
+      const dateB = parseDate(b.date);
+      
+      // Tri décroissant (plus récente en premier)
+      return dateB.getTime() - dateA.getTime();
+    });
   
   // Compter les nuits AVANT et APRÈS depuis les séances fusionnées + analyses individuelles
   let nuitsAvantCount = 0;
