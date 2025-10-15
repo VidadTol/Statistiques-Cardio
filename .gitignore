@@ -49,3 +49,6 @@ venv/
 
 # Ignore public assets cache
 stats-cardio/public/
+
+# Sql project documentation
+README-SQL.md
