@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [analyses, setAnalyses] = useState<SommeilData[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -21,23 +22,92 @@ export default function Dashboard() {
   };
 
   const handleAnalysesExtracted = (newAnalyses: SommeilData[]) => {
-    console.log("📊 Analyses reçues:", newAnalyses);
+    console.log("📊 Analyses reçues:", newAnalyses.length, "analyses");
     
-    // Si on a 2 analyses, essayer de les fusionner
-    if (newAnalyses.length === 2) {
-      const fusionResult = tryFusionAnalyses(newAnalyses);
-      if (fusionResult) {
-        console.log("✅ Fusion réussie:", fusionResult);
-        setAnalyses([fusionResult]);
-      } else {
-        console.log("❌ Pas de fusion possible, affichage séparé");
-        setAnalyses(newAnalyses);
+    // Nouvelle logique : détecter TOUTES les paires possibles dans le lot
+    const { seancesFusionnees, analysesIndividuelles } = detecterPairesMultiples(newAnalyses);
+    
+    console.log(`✅ Détectées: ${seancesFusionnees.length} séances fusionnées + ${analysesIndividuelles.length} analyses individuelles`);
+    
+    // Ajouter toutes les nouvelles analyses (fusionnées + individuelles)
+    setAnalyses(prev => {
+      const nouvelles = [...seancesFusionnees, ...analysesIndividuelles];
+      
+      // Filtrer les doublons de séances
+      const sansDoublons = nouvelles.filter(nouvelle => {
+        if (nouvelle.badge === "⚽ Séance") {
+          const existeDejaSeance = prev.some(analyse => 
+            analyse.date === nouvelle.date && analyse.badge === "⚽ Séance"
+          );
+          if (existeDejaSeance) {
+            console.log(`⚠️ Séance ${nouvelle.date} déjà existante, ignorée`);
+            return false;
+          }
+        }
+        return true;
+      });
+      
+      console.log(`📈 Total analyses après ajout: ${prev.length + sansDoublons.length}`);
+      return [...prev, ...sansDoublons];
+    });
+    
+    // FORCE déblocage après traitement
+    console.log("🔓 Déblocage de l'interface de upload");
+    setIsProcessing(false);
+    setSelectedImages([]); // Reset les images sélectionnées
+  };
+
+  // Fonction pour détecter toutes les paires fusionnables dans un lot d'analyses
+  const detecterPairesMultiples = (analyses: SommeilData[]) => {
+    const seancesFusionnees: SommeilData[] = [];
+    const analysesIndividuelles: SommeilData[] = [];
+    const analyseUtilisees = new Set<number>();
+    
+    console.log("🔍 Recherche de paires dans", analyses.length, "analyses");
+    
+    // Essayer de fusionner chaque analyse avec toutes les autres
+    for (let i = 0; i < analyses.length; i++) {
+      if (analyseUtilisees.has(i)) continue;
+      
+      let paireTrouvee = false;
+      
+      for (let j = i + 1; j < analyses.length; j++) {
+        if (analyseUtilisees.has(j)) continue;
+        
+        // Tenter de fusionner les analyses i et j
+        const fusionResult = tryFusionAnalyses([analyses[i], analyses[j]]);
+        
+        if (fusionResult) {
+          console.log(`✅ Paire fusionnée: ${analyses[i].date} + ${analyses[j].date} → ${fusionResult.date}`);
+          seancesFusionnees.push(fusionResult);
+          analyseUtilisees.add(i);
+          analyseUtilisees.add(j);
+          paireTrouvee = true;
+          break;
+        }
       }
-    } else {
-      setAnalyses(newAnalyses);
+      
+      // Si aucune paire trouvée pour cette analyse, l'ajouter individuellement
+      if (!paireTrouvee) {
+        console.log(`➡️ Analyse individuelle: ${analyses[i].date}`);
+        analysesIndividuelles.push(analyses[i]);
+        analyseUtilisees.add(i);
+      }
+    }
+
+    // 🚨 TOAST : Alerter si des images ne peuvent pas être fusionnées (ex: séances incompatibles)
+    if (analyses.length >= 2 && seancesFusionnees.length === 0 && analysesIndividuelles.length > 1) {
+      showToast("⚠️ Vérifiez vos images - Erreur détectée", "error");
     }
     
-    setIsProcessing(false);
+    return { seancesFusionnees, analysesIndividuelles };
+  };
+
+  // Fonction pour afficher les toasts
+  const showToast = (message: string, type: 'error' | 'success' | 'info') => {
+    setToast({ message, type });
+    // Auto-disparition après 4 secondes
+    setTimeout(() => setToast(null), 4000);
   };
 
   // Fonction pour fusionner 2 analyses si possible
@@ -137,6 +207,30 @@ export default function Dashboard() {
             </div>
             <h2 className="text-xl font-bold text-gray-800">Upload d'Images de Sommeil</h2>
           </div>
+          
+          {/* Bouton Reset si nécessaire */}
+          {(analyses.length > 0 || isProcessing) && (
+            <div className="mb-4 text-center">
+              <button 
+                onClick={() => {
+                  setSelectedImages([]);
+                  setIsProcessing(false);
+                  // Reset l'input file
+                  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+                  if (input) input.value = '';
+                }}
+                className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all"
+              >
+                ✨ Nouveau lot d'images
+              </button>
+              {analyses.length > 0 && (
+                <span className="ml-4 text-sm text-gray-600">
+                  {analyses.filter(a => a.badge === "⚽ Séance").length} séances • {analyses.length} analyses total
+                </span>
+              )}
+            </div>
+          )}
+          
           <div className="border-2 border-dashed border-indigo-300 rounded-xl p-8 text-center hover:border-indigo-400 transition-colors">
             <input
               type="file"
@@ -176,6 +270,30 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Toast de notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-[100] p-4 rounded-lg shadow-lg border-l-4 transform transition-all duration-300 ${
+          toast.type === 'error' 
+            ? 'bg-red-50 border-red-500 text-red-800' 
+            : toast.type === 'success' 
+            ? 'bg-green-50 border-green-500 text-green-800'
+            : 'bg-blue-50 border-blue-500 text-blue-800'
+        }`}>
+          <div className="flex items-center gap-3">
+            <span className="text-lg">
+              {toast.type === 'error' ? '⚠️' : toast.type === 'success' ? '✅' : 'ℹ️'}
+            </span>
+            <span className="font-medium">{toast.message}</span>
+            <button 
+              onClick={() => setToast(null)}
+              className="ml-2 text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
