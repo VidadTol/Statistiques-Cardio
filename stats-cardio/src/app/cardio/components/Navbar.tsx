@@ -100,16 +100,8 @@ export default function Navbar({
       {isUploading && (
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="bg-white rounded-xl p-6 shadow-lg border relative">
-            <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="w-5 h-5"
-              >
-                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-              </svg>
+            <h3 className="text-lg font-bold mb-4 text-gray-800 flex items-center gap-2">
+              <span className="w-8 h-8 text-blue-600 mb-6 ">{icons.refresh}</span>
               Importer votre fichier TCX
             </h3>
             <CardioUploader onAnalyseExtracted={handleNewAnalyse} />
