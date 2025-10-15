@@ -1,5 +1,4 @@
-// Icônes SVG centralisées pour le dashboard cardio
-// Remplacements simples des Lucide icons pour éviter les dépendances
+// Icônes SVG centralisées pour le dashboard cardio et sommeil
 
 export const icons = {
   running: (
@@ -124,5 +123,20 @@ export const icons = {
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-full h-full">
     <path d="M12 3a6.364 6.364 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
   </svg>
-),
+  ),
+  fileup: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-up h-12 w-12 text-blue-500" aria-hidden="true">
+                      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+                      <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+                      <path d="M12 12v6"></path>
+                      <path d="m15 15-3-3-3 3"></path>
+                    </svg>
+  ),
+  refresh: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-full h-full">
+      <polyline points="23 4 23 10 17 10" />
+      <polyline points="1 20 1 14 7 14" />
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+    </svg>
+  ),
 };
